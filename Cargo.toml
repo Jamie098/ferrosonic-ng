@@ -1,0 +1,62 @@
+[package]
+name = "ferrosonic"
+version = "0.1.0"
+edition = "2021"
+description = "A terminal-based Subsonic music client with bit-perfect audio playback"
+license = "MIT"
+authors = ["ferrosonic contributors"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full", "sync", "process", "signal"] }
+
+# Terminal UI
+ratatui = "0.29"
+crossterm = "0.28"
+tui-tree-widget = "0.22"
+
+# HTTP client for Subsonic API
+reqwest = { version = "0.12", features = ["json"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# D-Bus / MPRIS
+zbus = "5"
+mpris-server = "0.8"
+
+# Unix utilities
+libc = "0.2"
+
+# Utilities
+dirs = "6"
+url = "2"
+urlencoding = "2"
+md5 = "0.7"
+rand = "0.8"
+unicode-width = "0.2"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Async channels
+futures = "0.3"
+
+# Terminal emulator for cava integration
+vt100 = "0.15"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
