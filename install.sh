@@ -40,9 +40,35 @@ cargo build --release
 
 # Install
 sudo cp target/release/ferrosonic "$INSTALL_DIR/ferrosonic"
-echo ""
-echo "Ferrosonic installed to $INSTALL_DIR/ferrosonic"
-echo "Run 'ferrosonic' to start."
 
 # Cleanup
 rm -rf "$TMPDIR"
+
+echo ""
+echo "Ferrosonic installed to $INSTALL_DIR/ferrosonic"
+
+# Optional cava install
+echo ""
+echo "Optional: cava is an audio visualizer that ferrosonic can display"
+echo "alongside the now-playing bar. It is not required but adds a nice"
+echo "visual element that changes color with your selected theme."
+echo ""
+printf "Install cava? [y/N] "
+read -r answer
+if [ "$answer" = "y" ] || [ "$answer" = "Y" ]; then
+    if command -v pacman >/dev/null 2>&1; then
+        sudo pacman -S --needed --noconfirm cava
+    elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y cava
+    elif command -v apt >/dev/null 2>&1; then
+        sudo apt install -y cava
+    else
+        echo "Could not install cava automatically. Install it manually from: https://github.com/karlstav/cava"
+    fi
+    echo "cava installed. Enable it in ferrosonic under Settings (F5)."
+else
+    echo "Skipping cava. You can install it later and enable it in Settings (F5)."
+fi
+
+echo ""
+echo "Run 'ferrosonic' to start."
