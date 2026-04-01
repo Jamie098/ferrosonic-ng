@@ -136,6 +136,7 @@ impl App {
         let page = state.page;
         drop(state);
         match page {
+            Page::Songs => self.handle_songs_key(key).await,
             Page::Artists => self.handle_artists_key(key).await,
             Page::Queue => self.handle_queue_key(key).await,
             Page::Playlists => self.handle_playlists_key(key).await,
