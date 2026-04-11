@@ -1,7 +1,8 @@
 name: Build and Release
 
-# Trigger on version tags pushed to master
+# Trigger on version tags
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -36,10 +37,17 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build release binary
-        run: cargo build --release
+        run: cargo build --release --locked
+
+      - name: Prepare release asset
+        run: |
+          cp target/release/ferrosonic target/release/ferrosonic-${{ github.ref_name }}-linux-amd64
+          sha256sum target/release/ferrosonic-${{ github.ref_name }}-linux-amd64 > target/release/ferrosonic-${{ github.ref_name }}-linux-amd64.sha256
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: target/release/ferrosonic
+          files: |
+            target/release/ferrosonic-${{ github.ref_name }}-linux-amd64
+            target/release/ferrosonic-${{ github.ref_name }}-linux-amd64.sha256
           generate_release_notes: true
