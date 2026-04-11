@@ -2,6 +2,7 @@ use super::*;
 use crate::app::models::SongOption;
 use crate::error::Error;
 use ::ratatui::prelude::{Constraint, Layout};
+use strum::IntoEnumIterator;
 
 impl App {
     pub(super) async fn handle_songs_click(
@@ -23,11 +24,7 @@ impl App {
             let mut state = self.state.write().await;
             state.songs.focus = 0;
 
-            let option = match row_in_viewport {
-                0 => Some(SongOption::Starred),
-                1 => Some(SongOption::Random),
-                _ => None,
-            };
+            let option = SongOption::iter().nth(row_in_viewport);
 
             if let Some(opt) = option {
                 if state.songs.selected_option.as_ref() != Some(&opt) {
