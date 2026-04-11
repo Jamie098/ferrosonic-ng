@@ -1,0 +1,51 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Linux binary
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev libdbus-1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1d2c4b624590a64002322b7093aad96383c8ce4e # 1.78.0
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-1.78.0-x86_64-unknown-linux-gnu-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Prepare release asset
+        run: |
+          cp target/release/ferrosonic target/release/ferrosonic-${{ github.ref_name }}-linux-amd64
+          sha256sum target/release/ferrosonic-${{ github.ref_name }}-linux-amd64 > target/release/ferrosonic-${{ github.ref_name }}-linux-amd64.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
+        with:
+          files: |
+            target/release/ferrosonic-${{ github.ref_name }}-linux-amd64
+            target/release/ferrosonic-${{ github.ref_name }}-linux-amd64.sha256
+          generate_release_notes: true
