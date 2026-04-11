@@ -33,6 +33,7 @@ impl App {
             if let Some(opt) = option {
                 if state.songs.selected_option.as_ref() != Some(&opt) {
                     state.songs.selected_option = Some(opt.clone());
+                    state.songs.scroll_offset = 0;
                     drop(state);
                     match opt {
                         SongOption::Starred => self.get_starred_songs().await,

@@ -140,9 +140,11 @@ impl App {
         let mut state = self.state.write().await;
         match state.page {
             Page::Songs => {
-                if let Some(sel) = state.songs.selected_index {
-                    if sel > 0 {
-                        state.songs.selected_index = Some(sel - 1);
+                if state.songs.focus == 1 {
+                    if let Some(sel) = state.songs.selected_index {
+                        if sel > 0 {
+                            state.songs.selected_index = Some(sel - 1);
+                        }
                     }
                 }
             }
@@ -191,13 +193,15 @@ impl App {
         let mut state = self.state.write().await;
         match state.page {
             Page::Songs => {
-                let max = state.songs.songs.len().saturating_sub(1);
-                if let Some(sel) = state.songs.selected_index {
-                    if sel < max {
-                        state.songs.selected_index = Some(sel + 1);
+                if state.songs.focus == 1 {
+                    let max = state.songs.songs.len().saturating_sub(1);
+                    if let Some(sel) = state.songs.selected_index {
+                        if sel < max {
+                            state.songs.selected_index = Some(sel + 1);
+                        }
+                    } else if !state.songs.songs.is_empty() {
+                        state.songs.selected_index = Some(0);
                     }
-                } else if !state.songs.songs.is_empty() {
-                    state.songs.selected_index = Some(0);
                 }
             }
             Page::Artists => {
