@@ -1,8 +1,6 @@
 name: Build and Release
 
-# Trigger on version tags
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
