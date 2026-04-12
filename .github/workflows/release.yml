@@ -56,6 +56,7 @@ jobs:
     runs-on: ubuntu-22.04
     environment: release
     permissions:
+      contents: read
       id-token: write
     steps:
       - name: Checkout code
