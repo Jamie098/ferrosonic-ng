@@ -43,30 +43,29 @@ impl<'a> Footer<'a> {
         let mut binds = vec![
             ("q", "Quit"),
             ("p/Space", "Pause"),
-            ("s", "Shuffle"),
             ("h", "Prev"),
             ("l", "Next"),
-            ("t", "Theme"),
         ];
 
         match self.page {
             Page::Songs => {
-                binds.extend([("Enter", "Play")]);
+                binds.extend([("Enter", "Play"), ("Tab", "Focus")]);
             }
             Page::Artists => {
                 binds.extend([
-                    ("/", "Filter"),
-                    ("←/→", "Focus"),
+                    ("Enter", "Play"),
+                    ("s", "Shuffle"),
                     ("e", "Add"),
                     ("n", "Add next"),
-                    ("Enter", "Play"),
+                    ("/", "Filter"),
+                    ("←/→", "Focus"),
                 ]);
             }
             Page::Queue => {
                 binds.extend([
                     ("d", "Remove"),
                     ("J/K", "Move"),
-                    ("r", "Shuffle"),
+                    ("s", "Shuffle"),
                     ("c", "Clear history"),
                     ("Enter", "Play"),
                 ]);
@@ -76,7 +75,7 @@ impl<'a> Footer<'a> {
                     ("←/→", "Focus"),
                     ("e", "Add"),
                     ("n", "Add next"),
-                    ("r", "Shuffle play"),
+                    ("s", "Shuffle play"),
                     ("Enter", "Play"),
                 ]);
             }

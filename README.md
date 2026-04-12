@@ -147,7 +147,7 @@ The Songs page has two modes selectable from the options pane: **Starred** (show
 | `d` | Remove selected song from queue |
 | `J` (Shift+J) | Move selected song down |
 | `K` (Shift+K) | Move selected song up |
-| `r` | Shuffle queue (current song stays in place) |
+| `s` | Shuffle queue (current song stays in place) |
 | `c` | Clear played history (remove songs before current) |
 
 ### Playlists Page (F4)
@@ -160,7 +160,7 @@ The Songs page has two modes selectable from the options pane: **Starred** (show
 | `Enter` | Load playlist songs or play selected song |
 | `e` | Add selected item to end of queue |
 | `n` | Add selected song as next in queue |
-| `r` | Shuffle play all songs in selected playlist |
+| `s` | Shuffle play all songs in selected playlist |
 
 ### Server Page (F5)
 
