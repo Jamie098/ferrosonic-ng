@@ -39,13 +39,15 @@ jobs:
 
       - name: Prepare release asset
         run: |
-          cp target/release/ferrosonic target/release/ferrosonic-${{ github.ref_name }}-linux-amd64
-          sha256sum target/release/ferrosonic-${{ github.ref_name }}-linux-amd64 > target/release/ferrosonic-${{ github.ref_name }}-linux-amd64.sha256
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          cp target/release/ferrosonic "target/release/ferrosonic-${VERSION}-linux-x86_64"
+          sha256sum "target/release/ferrosonic-${VERSION}-linux-x86_64" > "target/release/ferrosonic-${VERSION}-linux-x86_64.sha256"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         with:
           files: |
-            target/release/ferrosonic-${{ github.ref_name }}-linux-amd64
-            target/release/ferrosonic-${{ github.ref_name }}-linux-amd64.sha256
+            target/release/ferrosonic-${{ env.VERSION }}-linux-x86_64
+            target/release/ferrosonic-${{ env.VERSION }}-linux-x86_64.sha256
           generate_release_notes: true
