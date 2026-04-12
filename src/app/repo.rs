@@ -82,4 +82,106 @@ impl App {
             }
         }
     }
+
+    pub async fn unstar_song(&mut self, id: String) {
+        if let Some(ref client) = self.subsonic {
+            match client.unstar_song(&id).await {
+                Ok(_) => {
+                    let mut state = self.state.write().await;
+                    state.notify("Song has been un-starred");
+                    info!("Song un-starred");
+                }
+                Err(e) => {
+                    error!("Failed to un-star song: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to un-star song: {}", e));
+                }
+            }
+        }
+    }
+
+    pub async fn star_song(&mut self, id: String) {
+        if let Some(ref client) = self.subsonic {
+            match client.star_song(&id).await {
+                Ok(_) => {
+                    let mut state = self.state.write().await;
+                    state.notify("Song has been starred");
+                    info!("Song starred");
+                }
+                Err(e) => {
+                    error!("Failed to star song: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to star song: {}", e));
+                }
+            }
+        }
+    }
+
+    pub async fn unstar_artist(&mut self, id: String) {
+        if let Some(ref client) = self.subsonic {
+            match client.unstar_artist(&id).await {
+                Ok(_) => {
+                    let mut state = self.state.write().await;
+                    state.notify("Artist has been un-starred");
+                    info!("Artist un-starred");
+                }
+                Err(e) => {
+                    error!("Failed to un-star artist: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to un-star artist: {}", e));
+                }
+            }
+        }
+    }
+
+    pub async fn star_artist(&mut self, id: String) {
+        if let Some(ref client) = self.subsonic {
+            match client.star_artist(&id).await {
+                Ok(_) => {
+                    let mut state = self.state.write().await;
+                    state.notify("Artist has been starred");
+                    info!("Artist starred");
+                }
+                Err(e) => {
+                    error!("Failed to star artist: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to star artist: {}", e));
+                }
+            }
+        }
+    }
+
+    pub async fn unstar_album(&mut self, id: String) {
+        if let Some(ref client) = self.subsonic {
+            match client.unstar_album(&id).await {
+                Ok(_) => {
+                    let mut state = self.state.write().await;
+                    state.notify("Album has been un-starred");
+                    info!("Album un-starred");
+                }
+                Err(e) => {
+                    error!("Failed to un-star album: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to un-star album: {}", e));
+                }
+            }
+        }
+    }
+
+    pub async fn star_album(&mut self, id: String) {
+        if let Some(ref client) = self.subsonic {
+            match client.star_album(&id).await {
+                Ok(_) => {
+                    let mut state = self.state.write().await;
+                    state.notify("Album has been starred");
+                    info!("Album starred");
+                }
+                Err(e) => {
+                    error!("Failed to star album: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to star album: {}", e));
+                }
+            }
+        }
+    }
 }

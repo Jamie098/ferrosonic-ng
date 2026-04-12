@@ -257,6 +257,98 @@ impl App {
                     }
                 }
             }
+            KeyCode::Char('f') => {
+                if state.artists.focus == 0 {
+                    let tree_items = build_tree_items(&state);
+                    if let Some(idx) = state.artists.selected_index {
+                        if let Some(item) = tree_items.get(idx) {
+                            match item {
+                                TreeItem::Artist { artist, .. } => {
+                                    let id = artist.id.clone();
+                                    let is_starred = artist.starred.is_some();
+
+                                    if is_starred {
+                                        if let Some(a) =
+                                            state.artists.artists.iter_mut().find(|a| a.id == id)
+                                        {
+                                            a.starred = None;
+                                        }
+                                    } else {
+                                        if let Some(a) =
+                                            state.artists.artists.iter_mut().find(|a| a.id == id)
+                                        {
+                                            a.starred = Some("starred".to_string());
+                                        }
+                                    }
+
+                                    state.songs.is_starred_dirty = true;
+
+                                    drop(state);
+                                    if is_starred {
+                                        self.unstar_artist(id).await;
+                                    } else {
+                                        self.star_artist(id).await;
+                                    }
+                                }
+                                TreeItem::Album { album } => {
+                                    let album_id = album.id.clone();
+                                    let artist_id = album.artist_id.clone();
+                                    let is_starred = album.starred.is_some();
+
+                                    if let Some(ref aid) = artist_id {
+                                        if let Some(albums) =
+                                            state.artists.albums_cache.get_mut(aid)
+                                        {
+                                            if let Some(a) =
+                                                albums.iter_mut().find(|a| a.id == album_id)
+                                            {
+                                                if is_starred {
+                                                    a.starred = None;
+                                                } else {
+                                                    a.starred = Some("starred".to_string());
+                                                }
+
+                                                state.songs.is_starred_dirty = true;
+                                            }
+                                        }
+                                    }
+
+                                    drop(state);
+                                    if is_starred {
+                                        self.unstar_album(album_id).await;
+                                    } else {
+                                        self.star_album(album_id).await;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if let Some(idx) = state.artists.selected_song {
+                        if idx < state.artists.songs.len() {
+                            let song = &mut state.artists.songs[idx];
+                            let song_id = song.id.clone();
+                            let is_starred = song.starred.is_some();
+
+                            if is_starred {
+                                song.starred = None;
+                            } else {
+                                song.starred = Some("starred".to_string());
+                            }
+
+                            state.songs.is_starred_dirty = true;
+
+                            drop(state);
+
+                            if is_starred {
+                                self.unstar_song(song_id).await;
+                            } else {
+                                self.star_song(song_id).await;
+                            }
+                        }
+                    }
+                }
+            }
             KeyCode::Enter => {
                 if state.artists.focus == 0 {
                     // Get current tree item

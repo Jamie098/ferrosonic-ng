@@ -35,6 +35,17 @@ impl App {
                     HeaderRegion::Tab(tab_page) => {
                         let mut state = self.state.write().await;
                         state.page = tab_page;
+
+                        let should_refresh_starred = state.songs.is_starred_dirty
+                            && state.songs.selected_option == Some(SongOption::Starred);
+
+                        drop(state);
+
+                        if should_refresh_starred {
+                            self.get_starred_songs().await;
+                            let mut state = self.state.write().await;
+                            state.songs.is_starred_dirty = false;
+                        }
                     }
                     HeaderRegion::PrevButton => {
                         return self.prev_track().await;

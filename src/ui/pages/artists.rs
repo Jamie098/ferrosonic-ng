@@ -124,7 +124,11 @@ fn render_tree(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &The
                         Style::default().fg(colors.artist)
                     };
 
-                    ListItem::new(artist.name.clone()).style(style)
+                    let is_starred = artist.starred.is_some();
+                    let star_indicator = if is_starred { "★ " } else { "  " };
+                    let name = format!("{}{}", star_indicator, &artist.name);
+
+                    ListItem::new(name).style(style)
                 }
                 TreeItem::Album { album } => {
                     let style = if is_selected {
@@ -135,9 +139,12 @@ fn render_tree(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &The
                         Style::default().fg(colors.album)
                     };
 
+                    let is_starred = album.starred.is_some();
+                    let star_indicator = if is_starred { "★ " } else { "  " };
+
                     // Indent albums with tree-style connector, show year in brackets
                     let year_str = album.year.map(|y| format!(" [{}]", y)).unwrap_or_default();
-                    let text = format!("  └─ {}{}", album.name, year_str);
+                    let text = format!("  └─ {}{}{}", star_indicator, album.name, year_str);
 
                     ListItem::new(text).style(style)
                 }
