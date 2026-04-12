@@ -1,8 +1,7 @@
-# Ferrosonic
-
+# Ferrosonic-ng
 A terminal-based Subsonic music client written in Rust, featuring bit-perfect audio playback, gapless transitions, and full desktop integration.
 
-Ferrosonic is inspired by [Termsonic](https://git.sixfoisneuf.fr/termsonic/about/), the original terminal Subsonic client written in Go by [SixFoisNeuf](https://www.sixfoisneuf.fr/posts/termsonic-a-terminal-client-for-subsonic/). Ferrosonic is a ground-up rewrite in Rust with additional features including PipeWire sample rate switching for bit-perfect audio, MPRIS2 media controls, multiple color themes, and mouse support.
+Ferrosonic-ng is a continuation of the original [ferrosonic](https://github.com/jaidaken/ferrosonic) by jaidaken, which is no longer actively maintained. Originally a ground-up rewrite of [Termsonic](https://git.sixfoisneuf.fr/termsonic/about/) in Rust, it features PipeWire sample rate switching for bit-perfect audio, MPRIS2 media controls, multiple color themes, and mouse support.
 
 ## Features
 
