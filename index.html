@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ferrosonic-ng — Terminal Subsonic Client</title>
+  <meta name="description" content="A terminal-based Subsonic music client written in Rust, featuring bit-perfect audio playback, gapless transitions, MPRIS2 integration, and 13+ themes.">
+  <meta name="keywords" content="ferrosonic, ferrosonic-ng, subsonic, navidrome, terminal, music player, rust, tui, mpris2, bit-perfect audio, gapless playback">
+  <meta property="og:title" content="ferrosonic-ng — Terminal Subsonic Client">
+  <meta property="og:description" content="A terminal-based Subsonic music client written in Rust with bit-perfect audio, gapless playback, and full desktop integration.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://jamie098.github.io/ferrosonic-ng">
+  <link rel="canonical" href="https://jamie098.github.io/ferrosonic-ng">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0c0e14;
+      --bg-surface: #141821;
+      --bg-card: #1a1f2e;
+      --bg-card-hover: #212738;
+      --accent: #e8965a;
+      --accent-glow: rgba(232, 150, 90, 0.15);
+      --accent-bright: #f0a96e;
+      --text-primary: #e2e4ea;
+      --text-secondary: #8890a4;
+      --text-muted: #555d73;
+      --border: #262d3d;
+      --green: #7ec89b;
+      --blue: #6ba3d6;
+      --purple: #b48ead;
+      --red: #d08787;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Grain overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      z-index: 9999;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      animation: fadeInDown 0.6s ease-out;
+    }
+
+    .hero-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .hero h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      animation: fadeInUp 0.7s ease-out;
+    }
+
+    .hero h1 .ng {
+      color: var(--accent);
+    }
+
+    .hero .tagline {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      color: var(--text-secondary);
+      max-width: 540px;
+      margin-top: 1.25rem;
+      font-weight: 300;
+      animation: fadeInUp 0.7s ease-out 0.1s both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeInUp 0.7s ease-out 0.2s both;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.75rem;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg-deep);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-bright);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(232, 150, 90, 0.25);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--text-muted);
+      transform: translateY(-1px);
+    }
+
+    /* ── Install bar ── */
+    .install-bar {
+      margin-top: 2.5rem;
+      animation: fadeInUp 0.7s ease-out 0.3s both;
+    }
+
+    .install-command {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .install-command:hover {
+      border-color: var(--accent);
+    }
+
+    .install-command .prompt {
+      color: var(--accent);
+      user-select: none;
+    }
+
+    .install-command .cmd {
+      color: var(--text-primary);
+    }
+
+    .install-command .copy-hint {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      margin-left: auto;
+    }
+
+    /* ── Screenshot ── */
+    .screenshot-section {
+      padding: 0 2rem 6rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .screenshot-frame {
+      max-width: 900px;
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: var(--bg-surface);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    .screenshot-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .screenshot-titlebar span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .screenshot-titlebar span:nth-child(1) { background: var(--red); }
+    .screenshot-titlebar span:nth-child(2) { background: var(--accent); }
+    .screenshot-titlebar span:nth-child(3) { background: var(--green); }
+
+    .screenshot-frame img {
+      width: 100%;
+      display: block;
+    }
+
+    /* ── Features ── */
+    .features {
+      padding: 4rem 2rem 6rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 600;
+      margin-bottom: 3rem;
+      max-width: 500px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      transition: all 0.25s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--text-muted);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ── Compatibility ── */
+    .compat {
+      padding: 4rem 2rem 6rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .server-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .server-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.15rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      font-weight: 400;
+      transition: border-color 0.2s;
+    }
+
+    .server-tag:hover {
+      border-color: var(--text-muted);
+    }
+
+    .server-tag .check {
+      color: var(--green);
+    }
+
+    /* ── CTA ── */
+    .cta {
+      text-align: center;
+      padding: 6rem 2rem;
+      position: relative;
+    }
+
+    .cta::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta h2 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .cta p {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--accent);
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.6s ease-out;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .install-command {
+        font-size: 0.7rem;
+        padding: 0.6rem 1rem;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      v0.1.2 — latest release
+    </div>
+    <h1>ferrosonic<span class="ng">-ng</span></h1>
+    <p class="tagline">A terminal-based Subsonic music client written in Rust. Bit-perfect audio. Gapless playback. Full desktop integration.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/Jamie098/ferrosonic-ng" class="btn btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        View on GitHub
+      </a>
+      <a href="https://github.com/Jamie098/ferrosonic-ng/releases/latest" class="btn btn-secondary">
+        Download
+      </a>
+    </div>
+    <div class="install-bar">
+      <div class="install-command" onclick="navigator.clipboard.writeText('curl -sSf https://raw.githubusercontent.com/Jamie098/ferrosonic-ng/master/install.sh | sh'); this.querySelector('.copy-hint').textContent = 'copied!'">
+        <span class="prompt">$</span>
+        <span class="cmd">curl -sSf https://raw.githubusercontent.com/Jamie098/ferrosonic-ng/master/install.sh | sh</span>
+        <span class="copy-hint">click to copy</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screenshot -->
+  <section class="screenshot-section fade-in">
+    <div class="screenshot-frame">
+      <div class="screenshot-titlebar">
+        <span></span><span></span><span></span>
+      </div>
+      <img src="https://raw.githubusercontent.com/Jamie098/ferrosonic-ng/master/docs/screenshots/ferrosonic.png" alt="ferrosonic-ng terminal interface showing album browser and audio playback">
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features fade-in">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need from a terminal music client</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🎵</span>
+        <h3>Bit-Perfect Audio</h3>
+        <p>Automatic PipeWire sample rate switching to match source material — 44.1kHz, 48kHz, 96kHz, 192kHz. Original rate restored on exit.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔗</span>
+        <h3>Gapless Playback</h3>
+        <p>Next track is pre-loaded into mpv's internal playlist for seamless transitions between songs.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🖥️</span>
+        <h3>MPRIS2 Integration</h3>
+        <p>Full desktop media control support — play, pause, stop, next, previous, and seek from your DE's media controls.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🎨</span>
+        <h3>13+ Themes</h3>
+        <p>Monokai, Dracula, Nord, Catppuccin, Tokyo Night, Gruvbox, and more. Create custom themes as TOML files.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📊</span>
+        <h3>Audio Visualizer</h3>
+        <p>Integrated cava visualizer with theme-matched gradient colors. See your music come alive in the terminal.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">⌨️</span>
+        <h3>Keyboard &amp; Mouse</h3>
+        <p>Vim-style navigation alongside arrow keys. Clickable tabs, buttons, list items, and progress bar seeking.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Compatibility -->
+  <section class="compat fade-in">
+    <div class="section-label">Compatibility</div>
+    <h2 class="section-title">Works with any Subsonic-compatible server</h2>
+    <div class="server-list">
+      <span class="server-tag"><span class="check">✓</span> Navidrome</span>
+      <span class="server-tag"><span class="check">✓</span> Airsonic</span>
+      <span class="server-tag"><span class="check">✓</span> Airsonic-Advanced</span>
+      <span class="server-tag"><span class="check">✓</span> Gonic</span>
+      <span class="server-tag"><span class="check">✓</span> Supysonic</span>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta fade-in">
+    <h2>Ready to try ferrosonic-ng?</h2>
+    <p>Install in seconds on Arch, Fedora, or Debian/Ubuntu.</p>
+    <a href="https://github.com/Jamie098/ferrosonic-ng" class="btn btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>ferrosonic-ng · MIT License · <a href="https://github.com/Jamie098/ferrosonic-ng">GitHub</a></p>
+  </footer>
+
+  <script>
+    // Scroll-triggered fade-in
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
