@@ -47,6 +47,12 @@ Supports Arch, Fedora, and Debian/Ubuntu. Installs runtime dependencies, downloa
 curl -sSf https://raw.githubusercontent.com/Jamie098/ferrosonic-ng/master/install.sh | sh
 ```
 
+### Install via Cargo
+
+```
+cargo install ferrosonic
+```
+
 ### Build from Source
 
 If you prefer to build from source, you'll also need: Rust toolchain, pkg-config, OpenSSL dev headers, and D-Bus dev headers. Then:
