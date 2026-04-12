@@ -45,7 +45,7 @@ Ferrosonic requires the following at runtime:
 Supports Arch, Fedora, and Debian/Ubuntu. Installs runtime dependencies, downloads the latest precompiled binary, and installs to `/usr/local/bin/`:
 
 ```bash
-curl -sSf https://raw.githubusercontent.com/Jamie098/ferrosonic/master/install.sh | sh
+curl -sSf https://raw.githubusercontent.com/Jamie098/ferrosonic-ng/master/install.sh | sh
 ```
 
 ### Build from Source
@@ -53,7 +53,7 @@ curl -sSf https://raw.githubusercontent.com/Jamie098/ferrosonic/master/install.s
 If you prefer to build from source, you'll also need: Rust toolchain, pkg-config, OpenSSL dev headers, and D-Bus dev headers. Then:
 
 ```bash
-git clone https://github.com/Jamie098/ferrosonic.git
+git clone https://github.com/Jamie098/ferrosonic-ng.git
 cd ferrosonic
 cargo build --release
 sudo cp target/release/ferrosonic /usr/local/bin/
