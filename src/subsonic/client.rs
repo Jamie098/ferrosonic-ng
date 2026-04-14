@@ -184,6 +184,7 @@ impl SubsonicClient {
             name: detail.name.clone(),
             album_count: Some(detail.album.len() as i32),
             cover_art: None,
+            starred: None,
         };
 
         debug!(
@@ -230,6 +231,7 @@ impl SubsonicClient {
             duration: None,
             year: detail.year,
             genre: None,
+            starred: None,
         };
 
         debug!(
@@ -311,6 +313,60 @@ impl SubsonicClient {
             .append_pair("c", CLIENT_NAME);
 
         Ok(url.to_string())
+    }
+
+    pub async fn unstar_song(&self, song_id: &str) -> Result<(), SubsonicError> {
+        match self.request::<()>(&format!("unstar?id={}", song_id)).await {
+            Ok(()) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn star_song(&self, song_id: &str) -> Result<(), SubsonicError> {
+        match self.request::<()>(&format!("star?id={}", song_id)).await {
+            Ok(()) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn unstar_artist(&self, artist_id: &str) -> Result<(), SubsonicError> {
+        match self
+            .request::<()>(&format!("unstar?artistId={}", artist_id))
+            .await
+        {
+            Ok(()) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn star_artist(&self, artist_id: &str) -> Result<(), SubsonicError> {
+        match self
+            .request::<()>(&format!("star?artistId={}", artist_id))
+            .await
+        {
+            Ok(()) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn unstar_album(&self, album_id: &str) -> Result<(), SubsonicError> {
+        match self
+            .request::<()>(&format!("unstar?albumId={}", album_id))
+            .await
+        {
+            Ok(()) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn star_album(&self, album_id: &str) -> Result<(), SubsonicError> {
+        match self
+            .request::<()>(&format!("star?albumId={}", album_id))
+            .await
+        {
+            Ok(()) => Ok(()),
+            Err(err) => Err(err),
+        }
     }
 }
 

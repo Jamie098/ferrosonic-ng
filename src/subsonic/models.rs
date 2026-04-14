@@ -80,6 +80,8 @@ pub struct Artist {
     pub album_count: Option<i32>,
     #[serde(default, rename = "coverArt")]
     pub cover_art: Option<String>,
+    #[serde(default)]
+    pub starred: Option<String>,
 }
 
 /// Artist detail with albums
@@ -115,6 +117,8 @@ pub struct Album {
     pub year: Option<i32>,
     #[serde(default)]
     pub genre: Option<String>,
+    #[serde(default)]
+    pub starred: Option<String>,
 }
 
 /// Album detail with songs

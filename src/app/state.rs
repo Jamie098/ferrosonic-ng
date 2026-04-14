@@ -127,6 +127,7 @@ pub struct SongsState {
     pub selected_index: Option<usize>,
     pub focus: usize,
     pub scroll_offset: usize,
+    pub is_starred_dirty: bool,
 }
 
 /// Artists page state

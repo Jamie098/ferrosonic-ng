@@ -77,6 +77,41 @@ impl App {
                 return self.play_queue_position(selected_song).await;
             }
             KeyCode::Tab => state.songs.focus = if state.songs.focus == 1 { 0 } else { 1 },
+            KeyCode::Char('f') => {
+                if state.songs.focus == 1 {
+                    let selected_song_idx = state
+                        .songs
+                        .selected_index
+                        .filter(|&idx| idx < state.songs.songs.len());
+
+                    let Some(selected_song_idx) = selected_song_idx else {
+                        return Ok(());
+                    };
+
+                    let song = &mut state.songs.songs[selected_song_idx];
+                    let id = song.id.clone();
+                    let was_starred = song.starred.is_some();
+
+                    if song.starred.is_some() {
+                        song.starred = None;
+                    } else {
+                        song.starred = Some("starred".to_string());
+                    }
+
+                    let refresh_needed = state.songs.selected_option == Some(SongOption::Starred);
+                    drop(state);
+
+                    if was_starred {
+                        self.unstar_song(id).await;
+                    } else {
+                        self.star_song(id).await;
+                    }
+
+                    if refresh_needed {
+                        self.get_starred_songs().await;
+                    }
+                }
+            }
             _ => {}
         }
 

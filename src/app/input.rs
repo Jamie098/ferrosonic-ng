@@ -68,6 +68,16 @@ impl App {
             // Page switching
             (KeyCode::F(1), _) => {
                 state.page = Page::Songs;
+                let should_refresh_starred = state.songs.is_starred_dirty
+                    && state.songs.selected_option == Some(SongOption::Starred);
+
+                drop(state);
+
+                if should_refresh_starred {
+                    self.get_starred_songs().await;
+                    let mut state = self.state.write().await;
+                    state.songs.is_starred_dirty = false;
+                }
                 return Ok(());
             }
             (KeyCode::F(2), _) => {
