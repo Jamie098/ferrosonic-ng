@@ -61,6 +61,9 @@ clap = { version = "4", features = ["derive"] }
 # Async channels
 futures = "0.3"
 
+# Notifications
+notify-rust = "4"
+
 # Terminal emulator for cava integration
 vt100 = "0.15"
 

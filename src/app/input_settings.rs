@@ -21,7 +21,7 @@ impl App {
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
-                    if field < 2 {
+                    if field < 3 {
                         state.settings_state.selected_field = field + 1;
                     }
                 }
@@ -55,6 +55,18 @@ impl App {
                             config_changed = true;
                         }
                     }
+                    3 => {
+                        state.settings_state.notifications_enabled =
+                            !state.settings_state.notifications_enabled;
+                        state.config.notifications = state.settings_state.notifications_enabled;
+                        let status = if state.settings_state.notifications_enabled {
+                            "On"
+                        } else {
+                            "Off"
+                        };
+                        state.notify(format!("Notifications: {}", status));
+                        config_changed = true;
+                    }
                     _ => {}
                 },
                 // Right / Enter / Space
@@ -87,6 +99,18 @@ impl App {
                                 state.notify(format!("Cava Size: {}%", new_size));
                                 config_changed = true;
                             }
+                        }
+                        3 => {
+                            state.settings_state.notifications_enabled =
+                                !state.settings_state.notifications_enabled;
+                            state.config.notifications = state.settings_state.notifications_enabled;
+                            let status = if state.settings_state.notifications_enabled {
+                                "On"
+                            } else {
+                                "Off"
+                            };
+                            state.notify(format!("Notifications: {}", status));
+                            config_changed = true;
                         }
                         _ => {}
                     }

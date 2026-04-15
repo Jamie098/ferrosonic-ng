@@ -1,3 +1,4 @@
+use crate::app::notifications::TrackInfo;
 use tracing::{debug, error, info, warn};
 
 use super::*;
@@ -76,6 +77,7 @@ impl App {
                                 // This avoids triggering PipeWire rate changes unnecessarily
                             }
                             drop(state);
+                            self.notify_track_change(next_pos).await;
 
                             // Remove the finished track (index 0) from MPV's playlist
                             // This is less disruptive than playlist_clear during playback
@@ -407,5 +409,25 @@ impl App {
         state.queue.clear();
         state.queue_position = None;
         Ok(())
+    }
+
+    async fn notify_track_change(&mut self, pos: usize) {
+        let (notifications_enabled, song) = {
+            let state = self.state.read().await;
+            let song = match state.queue.get(pos) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            (state.settings_state.notifications_enabled, song)
+        };
+
+        if notifications_enabled {
+            notifications::notify_track_change(&TrackInfo {
+                title: song.title.clone(),
+                artist: song.artist.unwrap_or_default(),
+                album: song.album.unwrap_or_default(),
+            });
+        }
     }
 }

@@ -211,6 +211,8 @@ pub struct SettingsState {
     pub cava_enabled: bool,
     /// Cava visualizer height percentage (10-80, step 5)
     pub cava_size: u8,
+    /// notifications enabled
+    pub notifications_enabled: bool,
 }
 
 impl Default for SettingsState {
@@ -221,6 +223,7 @@ impl Default for SettingsState {
             theme_index: 0,
             cava_enabled: false,
             cava_size: 40,
+            notifications_enabled: false,
         }
     }
 }
@@ -361,6 +364,9 @@ impl AppState {
         // Initialize cava from config
         state.settings_state.cava_enabled = config.cava;
         state.settings_state.cava_size = config.cava_size.clamp(10, 80);
+        // Initialize notifications from config
+        state.settings_state.notifications_enabled = config.notifications;
+
         state
     }
 
