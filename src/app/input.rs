@@ -48,7 +48,7 @@ impl App {
             state.page == Page::Server && state.server_state.selected_field <= 2;
         let is_filtering = state.page == Page::Artists && state.artists.filter_active;
 
-        if is_server_text_field || is_filtering {
+        if (is_server_text_field && !matches!(key.code, KeyCode::F(_))) || is_filtering {
             let page = state.page;
             drop(state);
             return match page {
