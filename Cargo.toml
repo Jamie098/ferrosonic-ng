@@ -1,6 +1,6 @@
 [package]
 name = "ferrosonic"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 description = "A terminal-based Subsonic music client with bit-perfect audio playback"
 license = "MIT"
@@ -60,6 +60,9 @@ clap = { version = "4", features = ["derive"] }
 
 # Async channels
 futures = "0.3"
+
+# Notifications
+notify-rust = "4"
 
 # Terminal emulator for cava integration
 vt100 = "0.15"

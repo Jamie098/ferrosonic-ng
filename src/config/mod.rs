@@ -34,6 +34,10 @@ pub struct Config {
     /// Cava visualizer height percentage (10-80, step 5)
     #[serde(rename = "CavaSize", default = "Config::default_cava_size")]
     pub cava_size: u8,
+
+    /// Notifications
+    #[serde(rename = "Notifications", default)]
+    pub notifications: bool,
 }
 
 impl Config {
