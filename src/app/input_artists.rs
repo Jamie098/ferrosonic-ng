@@ -532,6 +532,14 @@ impl App {
                             let title = song.title.clone();
                             state.queue.insert(insert_pos, song);
                             state.notify(format!("Playing next: {}", title));
+
+                            let queue_position = state.queue_position;
+                            drop(state);
+
+                            if let Some(pos) = queue_position {
+                                let _ = self.mpv.playlist_remove(1); // remove stale preloaded track
+                                self.preload_next_track(pos).await;
+                            }
                         }
                     }
                 } else if !state.artists.songs.is_empty() {
