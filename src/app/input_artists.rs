@@ -549,6 +549,14 @@ impl App {
                         state.queue.insert(insert_pos + i, song);
                     }
                     state.notify(format!("Playing {} songs next", count));
+
+                    let queue_position = state.queue_position;
+                    drop(state);
+
+                    if let Some(pos) = queue_position {
+                        let _ = self.mpv.playlist_remove(1); // remove stale preloaded track
+                        self.preload_next_track(pos).await;
+                    }
                 }
             }
             _ => {}
