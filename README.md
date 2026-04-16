@@ -90,6 +90,7 @@ Cava = true
 CavaSize = 40
 Notifications = true
 RandomSongsCount = 100
+Scrobble = true
 ```
 
 | Field | Type | Default | Description |
@@ -102,6 +103,7 @@ RandomSongsCount = 100
 | `CavaSize` | `u8` | `40` | Audio visualizer height percentage (range: `10`–`80`, step: `5`) |
 | `Notifications` | `bool` | `false` | Enable desktop track-change notifications |
 | `RandomSongsCount` | `usize` | `250` | Number of random songs to fetch |
+| `Scrobble` | `bool` | `true` | Enable scrobbling (reporting played tracks to the server) |
 
 Logs are written to `~/.config/ferrosonic/ferrosonic.log`.
 

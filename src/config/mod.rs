@@ -45,6 +45,10 @@ pub struct Config {
         default = "Config::default_random_songs_count"
     )]
     pub random_songs_count: usize,
+
+    /// Enable scrobbling (reporting played tracks to the server)
+    #[serde(rename = "Scrobble", default = "Config::default_scrobble")]
+    pub scrobble: bool,
 }
 
 impl Config {
@@ -54,6 +58,10 @@ impl Config {
 
     fn default_random_songs_count() -> usize {
         250
+    }
+
+    fn default_scrobble() -> bool {
+        true
     }
 
     /// Create a new empty config

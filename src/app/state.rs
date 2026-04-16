@@ -86,6 +86,8 @@ pub struct NowPlaying {
     pub format: Option<String>,
     /// Audio channel layout (e.g., "Stereo", "Mono", "5.1ch")
     pub channels: Option<String>,
+    /// Whether the current track has already been scrobbled
+    pub scrobbled: bool,
 }
 
 impl NowPlaying {
@@ -213,6 +215,8 @@ pub struct SettingsState {
     pub cava_size: u8,
     /// notifications enabled
     pub notifications_enabled: bool,
+    /// Scrobbling enabled
+    pub scrobble_enabled: bool,
 }
 
 impl Default for SettingsState {
@@ -224,6 +228,7 @@ impl Default for SettingsState {
             cava_enabled: false,
             cava_size: 40,
             notifications_enabled: false,
+            scrobble_enabled: true,
         }
     }
 }
@@ -366,6 +371,8 @@ impl AppState {
         state.settings_state.cava_size = config.cava_size.clamp(10, 80);
         // Initialize notifications from config
         state.settings_state.notifications_enabled = config.notifications;
+        // Initialize scrobbling from config
+        state.settings_state.scrobble_enabled = config.scrobble;
 
         state
     }

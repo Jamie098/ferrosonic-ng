@@ -73,6 +73,7 @@ impl App {
                                 state.now_playing.song = Some(song.clone());
                                 state.now_playing.position = 0.0;
                                 state.now_playing.duration = song.duration.unwrap_or(0) as f64;
+                                state.now_playing.scrobbled = false;
                                 // Don't reset audio properties - let them update naturally
                                 // This avoids triggering PipeWire rate changes unnecessarily
                             }
@@ -106,6 +107,42 @@ impl App {
         if let Ok(position) = self.mpv.get_time_pos() {
             let mut state = self.state.write().await;
             state.now_playing.position = position;
+        }
+
+        // Check scrobble threshold: 50% of duration or 4 minutes, whichever comes first
+        {
+            let (should_check, position, duration, song_id) = {
+                let state = self.state.read().await;
+                let should_check = state.settings_state.scrobble_enabled
+                    && !state.now_playing.scrobbled
+                    && state.now_playing.state == PlaybackState::Playing
+                    && state.now_playing.duration > 0.0;
+                let position = state.now_playing.position;
+                let duration = state.now_playing.duration;
+                let song_id = state.now_playing.song.as_ref().map(|s| s.id.clone());
+                (should_check, position, duration, song_id)
+            };
+
+            if should_check {
+                let threshold = (duration * 0.5_f64).min(240.0);
+                if position >= threshold {
+                    if let Some(song_id) = song_id {
+                        if let Some(ref client) = self.subsonic {
+                            match client.scrobble(&song_id, true).await {
+                                Ok(()) => {
+                                    info!("Scrobbled track: {}", song_id);
+                                }
+                                Err(e) => {
+                                    warn!("Scrobble failed (non-fatal): {}", e);
+                                }
+                            }
+                        }
+                        // Mark as scrobbled regardless of API result to avoid repeated attempts
+                        let mut state = self.state.write().await;
+                        state.now_playing.scrobbled = true;
+                    }
+                }
+            }
         }
 
         // Get duration if not set
@@ -339,6 +376,7 @@ impl App {
             state.now_playing.bit_depth = None;
             state.now_playing.format = None;
             state.now_playing.channels = None;
+            state.now_playing.scrobbled = false;
         }
 
         info!("Playing: {} (queue pos {})", song.title, pos);
