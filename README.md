@@ -126,6 +126,20 @@ Ferrosonic works with any server implementing the Subsonic API, including:
 ## Contributing
  
 Contributions are welcome! Feel free to open an issue or submit a pull request.
+
+For local development:
+
+```bash
+cargo build
+cargo test
+```
+
+Bug reports are most useful when they include:
+
+- Steps to reproduce the issue
+- Expected behavior and actual behavior
+- Version/commit and OS details
+- Relevant logs from `~/.config/ferrosonic/ferrosonic.log` (or `/tmp/ferrosonic.log` if a config directory is unavailable)
  
 ## License
  
