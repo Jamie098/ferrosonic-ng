@@ -135,7 +135,9 @@ impl App {
                 let mut cur_bg = CavaColor::Default;
 
                 for col in 0..cols {
-                    let cell = screen.cell(row, col).unwrap();
+                    let Some(cell) = screen.cell(row, col) else {
+                        continue;
+                    };
                     let fg = vt100_color_to_cava(cell.fgcolor());
                     let bg = vt100_color_to_cava(cell.bgcolor());
 
