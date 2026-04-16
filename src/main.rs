@@ -1,4 +1,4 @@
-//! Termsonic - A terminal-based Subsonic music client
+//! Ferrosonic - A terminal-based Subsonic music client
 //!
 //! Features:
 //! - Bit-perfect audio playback via MPV and PipeWire sample rate switching
