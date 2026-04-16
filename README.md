@@ -86,14 +86,20 @@ BaseURL = "https://your-subsonic-server.com"
 Username = "your-username"
 Password = "your-password"
 Theme = "Default"
+Cava = true
+CavaSize = 40
+Notifications = true
 ```
 
-| Field | Description |
-|---|---|
-| `BaseURL` | URL of your Subsonic-compatible server (Navidrome, Airsonic, Gonic, etc.) |
-| `Username` | Your server username |
-| `Password` | Your server password |
-| `Theme` | Color theme name (e.g. `Default`, `Catppuccin`, `Tokyo Night`) |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `BaseURL` | `string` | `""` | URL of your Subsonic-compatible server (Navidrome, Airsonic, Gonic, etc.) |
+| `Username` | `string` | `""` | Your server username |
+| `Password` | `string` | `""` | Your server password |
+| `Theme` | `string` | `""` | Color theme name (e.g. `Default`, `Catppuccin`, `Tokyo Night`) |
+| `Cava` | `bool` | `false` | Enable the audio visualizer |
+| `CavaSize` | `u8` | `40` | Audio visualizer height percentage (range: `10`–`80`, step: `5`) |
+| `Notifications` | `bool` | `false` | Enable desktop track-change notifications |
 
 Logs are written to `~/.config/ferrosonic/ferrosonic.log`.
 
