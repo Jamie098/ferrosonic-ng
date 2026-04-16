@@ -408,46 +408,22 @@ impl App {
                                                     return Ok(());
                                                 }
 
-                                                let first_song = songs[0].clone();
-                                                let stream_url =
-                                                    client.get_stream_url(&first_song.id);
-
                                                 let mut state = self.state.write().await;
                                                 let count = songs.len();
                                                 state.queue.clear();
                                                 state.queue.extend(songs.clone());
-                                                state.queue_position = Some(0);
                                                 state.artists.songs = songs;
                                                 state.artists.selected_song = Some(0);
                                                 state.artists.focus = 1;
-                                                state.now_playing.song = Some(first_song.clone());
-                                                state.now_playing.state = PlaybackState::Playing;
-                                                state.now_playing.position = 0.0;
-                                                state.now_playing.duration =
-                                                    first_song.duration.unwrap_or(0) as f64;
-                                                state.now_playing.sample_rate = None;
-                                                state.now_playing.bit_depth = None;
-                                                state.now_playing.format = None;
-                                                state.now_playing.channels = None;
+
                                                 state.notify(format!(
                                                     "Playing album: {} ({} songs)",
                                                     album_name, count
                                                 ));
+
                                                 drop(state);
 
-                                                match stream_url {
-                                                    Ok(url) => {
-                                                        if self.mpv.is_paused().unwrap_or(false) {
-                                                            let _ = self.mpv.resume();
-                                                        }
-                                                        if let Err(e) = self.mpv.loadfile(&url) {
-                                                            error!("Failed to play: {}", e);
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        error!("Failed to get stream URL: {}", e);
-                                                    }
-                                                }
+                                                return self.play_queue_position(0).await;
                                             }
                                             Err(e) => {
                                                 let mut state = self.state.write().await;
@@ -469,36 +445,14 @@ impl App {
                         if idx < state.artists.songs.len() {
                             let song = state.artists.songs[idx].clone();
                             let songs = state.artists.songs.clone();
+
                             state.queue.clear();
                             state.queue.extend(songs);
-                            state.queue_position = Some(idx);
-                            state.now_playing.song = Some(song.clone());
-                            state.now_playing.state = PlaybackState::Playing;
-                            state.now_playing.position = 0.0;
-                            state.now_playing.duration = song.duration.unwrap_or(0) as f64;
-                            state.now_playing.sample_rate = None;
-                            state.now_playing.bit_depth = None;
-                            state.now_playing.format = None;
-                            state.now_playing.channels = None;
+
                             state.notify(format!("Playing: {}", song.title));
                             drop(state);
 
-                            if let Some(ref client) = self.subsonic {
-                                match client.get_stream_url(&song.id) {
-                                    Ok(url) => {
-                                        if self.mpv.is_paused().unwrap_or(false) {
-                                            let _ = self.mpv.resume();
-                                        }
-                                        if let Err(e) = self.mpv.loadfile(&url) {
-                                            error!("Failed to play: {}", e);
-                                        }
-                                    }
-                                    Err(e) => {
-                                        error!("Failed to get stream URL: {}", e);
-                                    }
-                                }
-                            }
-                            return Ok(());
+                            return self.play_queue_position(idx).await;
                         }
                     }
                 }
