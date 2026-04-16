@@ -22,7 +22,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    if inner.height < 13 {
+    if inner.height < 15 {
         return;
     }
 
@@ -38,6 +38,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         Constraint::Length(2), // Cava size
         Constraint::Length(1), // Spacing
         Constraint::Length(2), // Notifications
+        Constraint::Length(1), // Spacing
+        Constraint::Length(2), // Scrobble toggle
         Constraint::Min(1),    // Remaining space
     ])
     .split(inner);
@@ -102,6 +104,22 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         &colors,
     );
 
+    // Scrobble toggle (field 4)
+    let scrobble_value = if settings.scrobble_enabled {
+        "On"
+    } else {
+        "Off"
+    };
+
+    render_option(
+        frame,
+        chunks[9],
+        "Scrobble",
+        scrobble_value,
+        settings.selected_field == 4,
+        &colors,
+    );
+
     // Help text at bottom
     let help_text = match settings.selected_field {
         0 => "← → or Enter to change theme (auto-saves)",
@@ -109,7 +127,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         1 => "cava is not installed on this system",
         2 if state.cava_available => "← → to adjust cava size (10%-80%, auto-saves)",
         2 => "cava is not installed on this system",
-        3 => "← → or Enter to desktop notifications",
+        3 => "← → or Enter to toggle desktop notifications",
+        4 => "← → or Enter to toggle scrobbling played tracks to the server",
         _ => "",
     };
     let help = Paragraph::new(help_text).style(Style::default().fg(colors.muted));

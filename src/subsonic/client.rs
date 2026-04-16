@@ -348,6 +348,19 @@ impl SubsonicClient {
         self.request::<()>(&format!("star?albumId={}", album_id))
             .await
     }
+
+    /// Scrobble a track to the server.
+    ///
+    /// Set `submission` to `true` when the track has been sufficiently played
+    /// (the standard Last.fm/Subsonic convention), or `false` to signal that
+    /// the track is now playing (a "now-playing" notification).
+    pub async fn scrobble(&self, song_id: &str, submission: bool) -> Result<(), SubsonicError> {
+        self.request::<()>(&format!(
+            "scrobble?id={}&submission={}",
+            song_id, submission
+        ))
+        .await
+    }
 }
 
 #[cfg(test)]
