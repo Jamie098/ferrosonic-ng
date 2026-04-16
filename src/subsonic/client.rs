@@ -130,8 +130,14 @@ impl SubsonicClient {
         Ok(songs)
     }
 
-    pub async fn get_random_songs(&self) -> Result<Vec<Child>, SubsonicError> {
-        let data: RandomSongsData = self.request("getRandomSongs?size=500").await?;
+    pub async fn get_random_songs(
+        &self,
+        random_songs_count: usize,
+    ) -> Result<Vec<Child>, SubsonicError> {
+        let data: RandomSongsData = self
+            .request(&format!("getRandomSongs?size={}", random_songs_count))
+            .await?;
+
         let songs = data.random_songs.song;
 
         debug!("Fetched {} songs", songs.len());
