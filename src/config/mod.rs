@@ -38,11 +38,22 @@ pub struct Config {
     /// Notifications
     #[serde(rename = "Notifications", default)]
     pub notifications: bool,
+
+    /// Number of random songs to fetch
+    #[serde(
+        rename = "RandomSongsCount",
+        default = "Config::default_random_songs_count"
+    )]
+    pub random_songs_count: usize,
 }
 
 impl Config {
     fn default_cava_size() -> u8 {
         40
+    }
+
+    fn default_random_songs_count() -> usize {
+        250
     }
 
     /// Create a new empty config

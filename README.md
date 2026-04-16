@@ -89,6 +89,7 @@ Theme = "Default"
 Cava = true
 CavaSize = 40
 Notifications = true
+RandomSongsCount = 100
 ```
 
 | Field | Type | Default | Description |
@@ -100,6 +101,7 @@ Notifications = true
 | `Cava` | `bool` | `false` | Enable the audio visualizer |
 | `CavaSize` | `u8` | `40` | Audio visualizer height percentage (range: `10`–`80`, step: `5`) |
 | `Notifications` | `bool` | `false` | Enable desktop track-change notifications |
+| `RandomSongsCount` | `usize` | `250` | Number of random songs to fetch |
 
 Logs are written to `~/.config/ferrosonic/ferrosonic.log`.
 

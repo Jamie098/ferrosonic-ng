@@ -25,7 +25,9 @@ impl App {
 
     pub async fn get_random_songs(&mut self) {
         if let Some(ref client) = self.subsonic {
-            match client.get_random_songs().await {
+            let random_songs_count = self.state.read().await.config.random_songs_count;
+
+            match client.get_random_songs(random_songs_count).await {
                 Ok(songs) => {
                     let mut state = self.state.write().await;
                     let count = songs.len();
