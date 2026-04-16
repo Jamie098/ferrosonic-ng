@@ -100,7 +100,7 @@ impl RootInterface for MprisPlayer {
     }
 
     async fn identity(&self) -> fdo::Result<String> {
-        Ok("Termsonic".to_string())
+        Ok("Ferrosonic".to_string())
     }
 
     async fn desktop_entry(&self) -> fdo::Result<String> {
@@ -369,4 +369,21 @@ pub async fn update_mpris_properties(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::state::new_shared_state;
+
+    #[tokio::test]
+    async fn identity_reports_ferrosonic_name() {
+        let (audio_tx, _audio_rx) = mpsc::channel(1);
+        let player = MprisPlayer::new(new_shared_state(Config::new()), audio_tx);
+
+        assert_eq!(
+            player.identity().await.expect("identity should be available"),
+            "Ferrosonic"
+        );
+    }
 }
