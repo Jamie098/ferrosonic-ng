@@ -52,9 +52,16 @@ impl App {
                                         Ok((_artist, albums)) => {
                                             let mut state = self.state.write().await;
                                             let count = albums.len();
-                                            state.artists.albums_cache.insert(artist_id.clone(), albums);
+                                            state
+                                                .artists
+                                                .albums_cache
+                                                .insert(artist_id.clone(), albums);
                                             state.artists.expanded.insert(artist_id);
-                                            tracing::info!("Loaded {} albums for {}", count, artist_name);
+                                            tracing::info!(
+                                                "Loaded {} albums for {}",
+                                                count,
+                                                artist_name
+                                            );
                                         }
                                         Err(e) => {
                                             let mut state = self.state.write().await;
@@ -79,40 +86,27 @@ impl App {
                                         if songs.is_empty() {
                                             let mut state = self.state.write().await;
                                             state.notify_error("Album has no songs");
-                                            self.last_click = Some((x, y, std::time::Instant::now()));
+                                            self.last_click =
+                                                Some((x, y, std::time::Instant::now()));
                                             return Ok(());
                                         }
-
-                                        let first_song = songs[0].clone();
-                                        let stream_url = client.get_stream_url(&first_song.id);
 
                                         let mut state = self.state.write().await;
                                         let count = songs.len();
                                         state.queue.clear();
                                         state.queue.extend(songs.clone());
-                                        state.queue_position = Some(0);
                                         state.artists.songs = songs;
                                         state.artists.selected_song = Some(0);
                                         state.artists.focus = 1;
-                                        state.now_playing.song = Some(first_song.clone());
-                                        state.now_playing.state = PlaybackState::Playing;
-                                        state.now_playing.position = 0.0;
-                                        state.now_playing.duration = first_song.duration.unwrap_or(0) as f64;
-                                        state.now_playing.sample_rate = None;
-                                        state.now_playing.bit_depth = None;
-                                        state.now_playing.format = None;
-                                        state.now_playing.channels = None;
-                                        state.notify(format!("Playing album: {} ({} songs)", album_name, count));
+
+                                        state.notify(format!(
+                                            "Playing album: {} ({} songs)",
+                                            album_name, count
+                                        ));
+
                                         drop(state);
 
-                                        if let Ok(url) = stream_url {
-                                            if self.mpv.is_paused().unwrap_or(false) {
-                                                let _ = self.mpv.resume();
-                                            }
-                                            if let Err(e) = self.mpv.loadfile(&url) {
-                                                error!("Failed to play: {}", e);
-                                            }
-                                        }
+                                        return self.play_queue_position(0).await;
                                     }
                                     Err(e) => {
                                         let mut state = self.state.write().await;
@@ -141,7 +135,11 @@ impl App {
                     }
                 }
             }
-        } else if x >= right.x && x < right.x + right.width && y >= right.y && y < right.y + right.height {
+        } else if x >= right.x
+            && x < right.x + right.width
+            && y >= right.y
+            && y < right.y + right.height
+        {
             // Songs pane click
             let row_in_viewport = y.saturating_sub(right.y + 1) as usize;
             let item_index = state.artists.song_scroll_offset + row_in_viewport;
