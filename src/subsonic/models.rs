@@ -245,6 +245,19 @@ pub struct PlaylistDetail {
     pub entry: Vec<Child>,
 }
 
+/// Search3 response wrapper
+#[derive(Debug, Deserialize)]
+pub struct Search3Data {
+    #[serde(rename = "searchResult3")]
+    pub search_result: SearchResult3,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchResult3 {
+    #[serde(default)]
+    pub song: Vec<Child>,
+}
+
 /// Ping response (for testing connection)
 #[derive(Debug, Deserialize)]
 pub struct PingData {}

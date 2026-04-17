@@ -1,18 +1,65 @@
 use super::*;
 
 impl App {
+    /// Page size used by the All-songs view.
+    const ALL_SONGS_PAGE_SIZE: usize = 50;
+
+    /// Fetch the next page of songs for the "All" view via `search3`.
+    ///
+    /// When `append` is `false` the song list is replaced (used on first load
+    /// or after the filter changes).  When `append` is `true` the new songs are
+    /// appended to the existing list (used for infinite-scroll pagination).
+    pub async fn get_all_songs(&mut self, append: bool) {
+        if let Some(ref client) = self.subsonic {
+            let (offset, filter) = {
+                let state = self.state.read().await;
+                (state.songs.all_songs_offset, state.songs.filter.clone())
+            };
+
+            {
+                let mut state = self.state.write().await;
+                state.songs.all_songs_loading = true;
+            }
+
+            match client
+                .search_songs(&filter, offset, Self::ALL_SONGS_PAGE_SIZE)
+                .await
+            {
+                Ok(songs) => {
+                    let mut state = self.state.write().await;
+                    let fetched = songs.len();
+                    let has_more = fetched == Self::ALL_SONGS_PAGE_SIZE;
+
+                    if append {
+                        state.songs.songs.extend(songs);
+                    } else {
+                        state.songs.songs = songs;
+                        state.songs.selected_index =
+                            if fetched > 0 { Some(0) } else { None };
+                        state.songs.scroll_offset = 0;
+                    }
+
+                    state.songs.all_songs_offset = offset + fetched;
+                    state.songs.all_songs_has_more = has_more;
+                    state.songs.all_songs_loading = false;
+                }
+                Err(e) => {
+                    error!("Failed to load all songs: {}", e);
+                    let mut state = self.state.write().await;
+                    state.songs.all_songs_loading = false;
+                    state.notify_error(format!("Failed to load all songs: {}", e));
+                }
+            }
+        }
+    }
+
     pub async fn get_starred_songs(&mut self) {
         if let Some(ref client) = self.subsonic {
             match client.get_starred_songs().await {
                 Ok(songs) => {
                     let mut state = self.state.write().await;
-                    let count = songs.len();
-                    state.songs.songs = songs;
-                    if count > 0 {
-                        state.songs.selected_index = Some(0);
-                    } else {
-                        state.songs.selected_index = None;
-                    }
+                    state.songs.backing_songs = songs;
+                    state.songs.apply_filter();
                 }
                 Err(e) => {
                     error!("Failed to load starred songs: {}", e);
@@ -30,13 +77,8 @@ impl App {
             match client.get_random_songs(random_songs_count).await {
                 Ok(songs) => {
                     let mut state = self.state.write().await;
-                    let count = songs.len();
-                    state.songs.songs = songs;
-                    if count > 0 {
-                        state.songs.selected_index = Some(0);
-                    } else {
-                        state.songs.selected_index = None;
-                    }
+                    state.songs.backing_songs = songs;
+                    state.songs.apply_filter();
                 }
                 Err(e) => {
                     error!("Failed to load random songs: {}", e);

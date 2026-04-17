@@ -43,10 +43,12 @@ impl App {
         // Clear notification on any keypress
         state.clear_notification();
 
-        // Bypass global keybindings when typing in server text fields or filtering artists
+        // Bypass global keybindings when typing in server text fields or filtering artists/songs
         let is_server_text_field =
             state.page == Page::Server && state.server_state.selected_field <= 2;
-        let is_filtering = state.page == Page::Artists && state.artists.filter_active;
+
+        let is_filtering = state.page == Page::Artists && state.artists.filter_active
+            || state.page == Page::Songs && state.songs.filter_active;
 
         if (is_server_text_field && !matches!(key.code, KeyCode::F(_))) || is_filtering {
             let page = state.page;
@@ -54,6 +56,7 @@ impl App {
             return match page {
                 Page::Server => self.handle_server_key(key).await,
                 Page::Artists => self.handle_artists_key(key).await,
+                Page::Songs => self.handle_songs_key(key).await,
                 _ => Ok(()),
             };
         }

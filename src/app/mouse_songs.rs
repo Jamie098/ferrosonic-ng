@@ -12,13 +12,21 @@ impl App {
         layout: &LayoutAreas,
     ) -> Result<(), Error> {
         let content = layout.content;
-        let chunks = Layout::vertical([Constraint::Percentage(15), Constraint::Percentage(85)])
-            .split(content);
+        let chunks = Layout::vertical([
+            Constraint::Percentage(15),
+            Constraint::Percentage(7),
+            Constraint::Percentage(78),
+        ])
+        .split(content);
 
         let options_area = chunks[0];
-        let songs_area = chunks[1];
+        let search_area = chunks[1];
+        let songs_area = chunks[2];
 
-        if y >= options_area.y && y < options_area.y + options_area.height {
+        if y >= search_area.y && y < search_area.y + search_area.height {
+            // Click in the search bar — activate filter input
+            self.state.write().await.songs.filter_active = true;
+        } else if y >= options_area.y && y < options_area.y + options_area.height {
             // Click in the options pane
             let row_in_viewport = y.saturating_sub(options_area.y + 1) as usize; // +1 for border
             let mut state = self.state.write().await;
@@ -32,6 +40,13 @@ impl App {
                     state.songs.scroll_offset = 0;
                     drop(state);
                     match opt {
+                        SongOption::All => {
+                            let mut state = self.state.write().await;
+                            state.songs.all_songs_offset = 0;
+                            state.songs.all_songs_has_more = true;
+                            drop(state);
+                            self.get_all_songs(false).await;
+                        }
                         SongOption::Starred => self.get_starred_songs().await,
                         SongOption::Random => self.get_random_songs().await,
                     }

@@ -67,6 +67,14 @@ impl SubsonicClient {
         T: serde::de::DeserializeOwned,
     {
         let url = self.build_url(endpoint)?;
+        self.request_url(url).await
+    }
+
+    /// Execute a request against a pre-built URL and parse the response.
+    async fn request_url<T>(&self, url: Url) -> Result<T, SubsonicError>
+    where
+        T: serde::de::DeserializeOwned,
+    {
         debug!(
             "Requesting: {}",
             url.as_str().split('?').next().unwrap_or("")
@@ -127,6 +135,36 @@ impl SubsonicClient {
         let songs = data.starred_songs.song;
 
         debug!("Fetched {} songs", songs.len());
+        Ok(songs)
+    }
+
+    /// Search for songs via `search3`.
+    ///
+    /// Pass an empty string for `query` to retrieve all songs (ordered by the
+    /// server's default sort).  `offset` and `count` control pagination.
+    pub async fn search_songs(
+        &self,
+        query: &str,
+        offset: usize,
+        count: usize,
+    ) -> Result<Vec<Child>, SubsonicError> {
+        let mut url = self.build_url("search3")?;
+        url.query_pairs_mut()
+            .append_pair("query", query)
+            .append_pair("songCount", &count.to_string())
+            .append_pair("songOffset", &offset.to_string())
+            .append_pair("artistCount", "0")
+            .append_pair("albumCount", "0");
+
+        debug!(
+            "Searching songs: query={:?}, offset={}, count={}",
+            query, offset, count
+        );
+
+        let data: Search3Data = self.request_url(url).await?;
+        let songs = data.search_result.song;
+
+        debug!("Fetched {} songs (offset={})", songs.len(), offset);
         Ok(songs)
     }
 
@@ -390,5 +428,80 @@ mod tests {
         let url = "https://example.com/rest/stream?u=user";
         let id = SubsonicClient::parse_song_id_from_url(url);
         assert_eq!(id, None);
+    }
+
+    fn parse_search3_response(json: &str) -> Result<Vec<Child>, SubsonicError> {
+        let parsed: SubsonicResponse<Search3Data> = serde_json::from_str(json)
+            .map_err(|e| SubsonicError::Parse(format!("Failed to parse response: {}", e)))?;
+        let inner = parsed.subsonic_response;
+        if inner.status != "ok" {
+            if let Some(error) = inner.error {
+                return Err(SubsonicError::Api {
+                    code: error.code,
+                    message: error.message,
+                });
+            }
+            return Err(SubsonicError::Api {
+                code: 0,
+                message: "Unknown error".to_string(),
+            });
+        }
+        Ok(inner
+            .data
+            .ok_or_else(|| SubsonicError::Parse("Empty response data".to_string()))?
+            .search_result
+            .song)
+    }
+
+    #[test]
+    fn test_search3_parses_songs() {
+        let json = r#"{
+            "subsonic-response": {
+                "status": "ok",
+                "version": "1.16.1",
+                "searchResult3": {
+                    "song": [
+                        {"id": "1", "title": "Song One", "isDir": false},
+                        {"id": "2", "title": "Song Two", "isDir": false}
+                    ]
+                }
+            }
+        }"#;
+        let songs = parse_search3_response(json).unwrap();
+        assert_eq!(songs.len(), 2);
+        assert_eq!(songs[0].id, "1");
+        assert_eq!(songs[1].title, "Song Two");
+    }
+
+    #[test]
+    fn test_search3_empty_results() {
+        let json = r#"{
+            "subsonic-response": {
+                "status": "ok",
+                "version": "1.16.1",
+                "searchResult3": { "song": [] }
+            }
+        }"#;
+        let songs = parse_search3_response(json).unwrap();
+        assert!(songs.is_empty());
+    }
+
+    #[test]
+    fn test_search3_api_error_propagates() {
+        let json = r#"{
+            "subsonic-response": {
+                "status": "failed",
+                "version": "1.16.1",
+                "error": { "code": 70, "message": "Search not supported" }
+            }
+        }"#;
+        let err = parse_search3_response(json).unwrap_err();
+        match err {
+            SubsonicError::Api { code, message } => {
+                assert_eq!(code, 70);
+                assert_eq!(message, "Search not supported");
+            }
+            other => panic!("Expected Api error, got {:?}", other),
+        }
     }
 }
