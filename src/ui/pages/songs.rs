@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Modifier, Style},
     text::Span,
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame,
 };
 
@@ -15,11 +15,16 @@ use strum::IntoEnumIterator;
 pub fn render(frame: &mut Frame, area: Rect, state: &mut AppState) {
     let colors = *state.settings_state.theme_colors();
 
-    let chunks =
-        Layout::vertical([Constraint::Percentage(15), Constraint::Percentage(85)]).split(area);
+    let chunks = Layout::vertical([
+        Constraint::Percentage(15),
+        Constraint::Percentage(7),
+        Constraint::Percentage(78),
+    ])
+    .split(area);
 
     render_options(frame, chunks[0], state, &colors);
-    render_songs(frame, chunks[1], state, &colors);
+    render_search(frame, chunks[1], state, &colors);
+    render_songs(frame, chunks[2], state, &colors);
 }
 
 fn render_options(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &ThemeColors) {
@@ -28,7 +33,7 @@ fn render_options(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &
         .songs
         .selected_option
         .clone()
-        .unwrap_or(SongOption::Starred);
+        .unwrap_or(SongOption::All);
 
     let focused = focus == 0;
     let border_style = if focused {
@@ -37,9 +42,11 @@ fn render_options(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &
         Style::default().fg(colors.border_unfocused)
     };
 
+    let title = " Song Options ".to_string();
+
     let block = Block::default()
         .borders(Borders::ALL)
-        .title("Song Options")
+        .title(title)
         .border_style(border_style);
 
     let items = SongOption::iter().map(|option| {
@@ -72,6 +79,19 @@ fn render_options(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &
     frame.render_stateful_widget(list, area, &mut list_state);
 }
 
+fn render_search(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &ThemeColors) {
+    let border_style = if state.songs.filter_active {
+        Style::default().fg(colors.border_focused)
+    } else {
+        Style::default().fg(colors.border_unfocused)
+    };
+
+    let block = Block::bordered().title("Search").border_style(border_style);
+
+    let paragraph = Paragraph::new(state.songs.filter.as_str()).block(block);
+    frame.render_widget(paragraph, area);
+}
+
 fn render_songs(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &ThemeColors) {
     let songs = &state.songs;
 
@@ -82,9 +102,15 @@ fn render_songs(frame: &mut Frame, area: Rect, state: &mut AppState, colors: &Th
         Style::default().fg(colors.border_unfocused)
     };
 
+    let title = if songs.all_songs_loading {
+        " Songs [loading…] ".to_string()
+    } else {
+        " Songs ".to_string()
+    };
+
     let block = Block::default()
         .borders(Borders::ALL)
-        .title("Songs")
+        .title(title)
         .border_style(border_style);
 
     let items: Vec<ListItem> = songs

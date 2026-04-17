@@ -124,12 +124,57 @@ pub fn format_duration(seconds: f64) -> String {
 
 #[derive(Debug, Clone, Default)]
 pub struct SongsState {
+    /// Currently displayed songs (filtered subset for Starred/Random, paginated for All)
     pub songs: Vec<Child>,
+    /// Unfiltered backing store for Starred/Random options
+    pub backing_songs: Vec<Child>,
     pub selected_option: Option<SongOption>,
     pub selected_index: Option<usize>,
     pub focus: usize,
     pub scroll_offset: usize,
     pub is_starred_dirty: bool,
+    /// Current filter text
+    pub filter: String,
+    /// Whether filter input is active
+    pub filter_active: bool,
+    /// Current pagination offset for the All option
+    pub all_songs_offset: usize,
+    /// Whether more songs are available for the All option
+    pub all_songs_has_more: bool,
+    /// Whether a page of All songs is currently being fetched
+    pub all_songs_loading: bool,
+}
+
+impl SongsState {
+    /// Filter `backing_songs` into `songs` using the current `filter` text.
+    /// Resets `selected_index` and `scroll_offset` after filtering.
+    pub fn apply_filter(&mut self) {
+        if self.filter.is_empty() {
+            self.songs = self.backing_songs.clone();
+        } else {
+            let lower = self.filter.to_lowercase();
+            self.songs = self
+                .backing_songs
+                .iter()
+                .filter(|s| {
+                    s.title.to_lowercase().contains(&lower)
+                        || s.artist
+                            .as_deref()
+                            .unwrap_or("")
+                            .to_lowercase()
+                            .contains(&lower)
+                        || s.album
+                            .as_deref()
+                            .unwrap_or("")
+                            .to_lowercase()
+                            .contains(&lower)
+                })
+                .cloned()
+                .collect();
+        }
+        self.selected_index = if self.songs.is_empty() { None } else { Some(0) };
+        self.scroll_offset = 0;
+    }
 }
 
 /// Artists page state
@@ -373,6 +418,8 @@ impl AppState {
         state.settings_state.notifications_enabled = config.notifications;
         // Initialize scrobbling from config
         state.settings_state.scrobble_enabled = config.scrobble;
+        // Default to All songs so navigation and rendering start in sync
+        state.songs.selected_option = Some(SongOption::All);
 
         state
     }

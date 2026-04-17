@@ -213,6 +213,22 @@ impl App {
                     } else if !state.songs.songs.is_empty() {
                         state.songs.selected_index = Some(0);
                     }
+
+                    // Trigger infinite-scroll load for the All option
+                    let should_load_more = state.songs.selected_option == Some(SongOption::All)
+                        && state.songs.all_songs_has_more
+                        && !state.songs.all_songs_loading
+                        && state
+                            .songs
+                            .selected_index
+                            .map(|i| i + INFINITE_SCROLL_LOOKAHEAD >= state.songs.songs.len())
+                            .unwrap_or(false);
+
+                    drop(state);
+
+                    if should_load_more {
+                        self.get_all_songs(true).await;
+                    }
                 }
             }
             Page::Artists => {

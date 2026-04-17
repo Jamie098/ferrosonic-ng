@@ -46,6 +46,12 @@ pub use state::*;
 /// Channel buffer size
 const CHANNEL_SIZE: usize = 256;
 
+/// Rows from the end of the All-songs list at which infinite scroll triggers a new page fetch
+pub(super) const INFINITE_SCROLL_LOOKAHEAD: usize = 10;
+
+/// How long after the last filter keystroke before firing the All-songs server search
+pub(super) const FILTER_DEBOUNCE_MS: u64 = 300;
+
 /// Main application
 pub struct App {
     /// Shared application state
@@ -66,6 +72,8 @@ pub struct App {
     cava_parser: Option<vt100::Parser>,
     /// Last mouse click position and time (for second-click detection)
     last_click: Option<(u16, u16, std::time::Instant)>,
+    /// Debounce timer for All-songs filter input; fires a search 300 ms after the last keypress
+    songs_filter_debounce: Option<std::time::Instant>,
     /// Channel to receive audio actions (from MPRIS)
     audio_rx: mpsc::Receiver<AudioAction>,
     /// MPRIS D-Bus server
@@ -101,6 +109,7 @@ impl App {
             cava_pty_master: None,
             cava_parser: None,
             last_click: None,
+            songs_filter_debounce: None,
             audio_rx,
             mpris_server: None,
         }
@@ -215,11 +224,14 @@ impl App {
 
     /// Load initial data from server
     async fn load_initial_data(&mut self) {
-        let mut state = self.state.write().await;
-        state.songs.selected_option = Some(SongOption::Starred);
-        drop(state);
+        {
+            let mut state = self.state.write().await;
+            state.songs.selected_option = Some(SongOption::All);
+            state.songs.all_songs_offset = 0;
+            state.songs.all_songs_has_more = true;
+        }
 
-        self.get_starred_songs().await;
+        self.get_all_songs(false).await;
         self.get_artists().await;
         self.get_playlists().await;
     }
@@ -260,6 +272,23 @@ impl App {
             if event::poll(tick_rate).map_err(UiError::Input)? {
                 let event = event::read().map_err(UiError::Input)?;
                 self.handle_event(event).await?;
+            }
+
+            // Fire debounced All-songs search 300 ms after the last filter keystroke
+            if let Some(changed_at) = self.songs_filter_debounce {
+                if changed_at.elapsed() >= Duration::from_millis(FILTER_DEBOUNCE_MS) {
+                    self.songs_filter_debounce = None;
+                    let is_all = self.state.read().await.songs.selected_option
+                        == Some(SongOption::All);
+                    if is_all {
+                        {
+                            let mut state = self.state.write().await;
+                            state.songs.all_songs_offset = 0;
+                            state.songs.all_songs_has_more = true;
+                        }
+                        self.get_all_songs(false).await;
+                    }
+                }
             }
 
             // Process any pending audio actions (from MPRIS)

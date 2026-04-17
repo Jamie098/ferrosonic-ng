@@ -49,7 +49,7 @@ impl<'a> Footer<'a> {
 
         match self.page {
             Page::Songs => {
-                binds.extend([("Enter", "Play"), ("Tab", "Focus")]);
+                binds.extend([("/", "Search"), ("Enter", "Play"), ("Tab", "Focus")]);
             }
             Page::Artists => {
                 binds.extend([
@@ -57,7 +57,7 @@ impl<'a> Footer<'a> {
                     ("s", "Shuffle"),
                     ("e", "Add"),
                     ("n", "Add next"),
-                    ("/", "Filter"),
+                    ("/", "Search"),
                     ("←/→", "Focus"),
                 ]);
             }
