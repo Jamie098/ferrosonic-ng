@@ -1,6 +1,8 @@
 # Ferrosonic-ng
 ![Release](https://github.com/Jamie098/ferrosonic-ng/actions/workflows/release.yml/badge.svg)
+![CI](https://github.com/Jamie098/ferrosonic-ng/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![MSRV: 1.70](https://img.shields.io/badge/MSRV-1.70-orange.svg)
 
 A terminal-based Subsonic music client written in Rust, featuring bit-perfect audio playback, gapless transitions, and full desktop integration.
 
@@ -53,9 +55,13 @@ curl -sSf https://raw.githubusercontent.com/Jamie098/ferrosonic-ng/master/instal
 cargo install ferrosonic
 ```
 
+### Requirements
+
+Ferrosonic requires **Rust 1.70 or later**. Check your version with `rustup show` and update with `rustup update stable` if needed.
+
 ### Build from Source
 
-If you prefer to build from source, you'll also need: Rust toolchain, pkg-config, OpenSSL dev headers, and D-Bus dev headers. Then:
+If you prefer to build from source, you'll also need: Rust toolchain (≥ 1.70), pkg-config, OpenSSL dev headers, and D-Bus dev headers. Then:
 
 ```bash
 git clone https://github.com/Jamie098/ferrosonic-ng.git
@@ -109,7 +115,6 @@ Logs are written to `~/.config/ferrosonic/ferrosonic.log`.
 
 ## Themes
 Ferrosonic ships multiple built-in themes, as well as support for custom themes. Here are two examples:
-<!-- A file in docs/ should be added with every built-in theme to show them off fully, these are just examples -->
 
 | Nord | Gruvbox |
 |---|---|
