@@ -172,8 +172,7 @@ impl MpvController {
                     }
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    // Timeout, try again
-                    continue;
+                    std::thread::sleep(Duration::from_millis(1));
                 }
                 Err(e) => return Err(AudioError::MpvIpc(e.to_string())),
             }
