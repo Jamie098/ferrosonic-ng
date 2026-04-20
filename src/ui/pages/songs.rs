@@ -16,9 +16,9 @@ pub fn render(frame: &mut Frame, area: Rect, state: &mut AppState) {
     let colors = *state.settings_state.theme_colors();
 
     let chunks = Layout::vertical([
-        Constraint::Percentage(15),
-        Constraint::Percentage(7),
-        Constraint::Percentage(78),
+        Constraint::Length(5),
+        Constraint::Length(3),
+        Constraint::Fill(1),
     ])
     .split(area);
 
