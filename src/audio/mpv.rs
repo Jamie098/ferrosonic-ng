@@ -169,7 +169,7 @@ impl MpvController {
                     if let Ok(resp) = serde_json::from_str::<MpvResponse>(&line) {
                         if resp.request_id == Some(request_id) {
                             if resp.error != "success" {
-                                return Err(AudioError::MpvIpc(resp.error));
+                                return Err(AudioError::MpvCommand(resp.error));
                             }
                             return Ok(resp.data);
                         }

@@ -82,6 +82,9 @@ pub enum AudioError {
     #[error("MPV socket connection failed: {0}")]
     MpvSocket(std::io::Error),
 
+    #[error("MPV command error: {0}")]
+    MpvCommand(String),
+
     #[error("PipeWire command failed: {0}")]
     PipeWire(String),
 
