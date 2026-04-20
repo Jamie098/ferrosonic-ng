@@ -12,7 +12,19 @@ impl App {
         let is_active = is_playing || state.now_playing.state == PlaybackState::Paused;
         drop(state);
 
-        if !is_active || !self.mpv.is_running() {
+        if !is_active {
+            return;
+        }
+
+        if !self.mpv.is_running() {
+            warn!("MPV not running during active playback — attempting restart");
+            let mut state = self.state.write().await;
+            state.notify_error("Playback stopped: MPV crashed. Attempting to restart…".to_string());
+            state.now_playing.state = PlaybackState::Stopped;
+            drop(state);
+            if let Err(e) = self.mpv.start() {
+                error!("Failed to restart MPV: {}", e);
+            }
             return;
         }
 

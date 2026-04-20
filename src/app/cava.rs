@@ -38,7 +38,9 @@ impl App {
                 ws_xpixel: 0,
                 ws_ypixel: 0,
             };
-            libc::ioctl(slave, libc::TIOCSWINSZ, &ws);
+            if libc::ioctl(slave, libc::TIOCSWINSZ, &ws) != 0 {
+                error!("Failed to set pty size: ioctl TIOCSWINSZ failed");
+            }
         }
 
         // Generate themed cava config and write to temp file
@@ -48,7 +50,7 @@ impl App {
         let slave_stdout = unsafe { std::fs::File::from_raw_fd(slave) };
         let slave_stdin = unsafe { std::fs::File::from_raw_fd(slave_stdin_fd) };
         let slave_stderr = unsafe { std::fs::File::from_raw_fd(slave_stderr_fd) };
-        let config_path = std::env::temp_dir().join("ferrosonic-cava.conf");
+        let config_path = std::env::temp_dir().join(format!("ferrosonic-cava-{}.conf", std::process::id()));
         if let Err(e) = std::fs::write(&config_path, generate_cava_config(cava_gradient, cava_horizontal_gradient)) {
             error!("Failed to write cava config: {}", e);
             return;
@@ -65,7 +67,11 @@ impl App {
                 // Set master to non-blocking
                 unsafe {
                     let flags = libc::fcntl(master, libc::F_GETFL);
-                    libc::fcntl(master, libc::F_SETFL, flags | libc::O_NONBLOCK);
+                    if flags == -1 || libc::fcntl(master, libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
+                        error!("Failed to set pty master to non-blocking mode");
+                        libc::close(master);
+                        return;
+                    }
                 }
 
                 let master_file = unsafe { std::fs::File::from_raw_fd(master) };

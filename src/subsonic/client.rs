@@ -172,9 +172,9 @@ impl SubsonicClient {
         &self,
         random_songs_count: usize,
     ) -> Result<Vec<Child>, SubsonicError> {
-        let data: RandomSongsData = self
-            .request(&format!("getRandomSongs?size={}", random_songs_count))
-            .await?;
+        let mut url = self.build_url("getRandomSongs")?;
+        url.query_pairs_mut().append_pair("size", &random_songs_count.to_string());
+        let data: RandomSongsData = self.request_url(url).await?;
 
         let songs = data.random_songs.song;
 
@@ -199,7 +199,8 @@ impl SubsonicClient {
 
     /// Get artist details with albums
     pub async fn get_artist(&self, id: &str) -> Result<(Artist, Vec<Album>), SubsonicError> {
-        let url = self.build_url(&format!("getArtist?id={}", id))?;
+        let mut url = self.build_url("getArtist")?;
+        url.query_pairs_mut().append_pair("id", id);
         debug!("Fetching artist: {}", id);
 
         let response = self.http.get(url).send().await?;
@@ -241,7 +242,8 @@ impl SubsonicClient {
 
     /// Get album details with songs
     pub async fn get_album(&self, id: &str) -> Result<(Album, Vec<Child>), SubsonicError> {
-        let url = self.build_url(&format!("getAlbum?id={}", id))?;
+        let mut url = self.build_url("getAlbum")?;
+        url.query_pairs_mut().append_pair("id", id);
         debug!("Fetching album: {}", id);
 
         let response = self.http.get(url).send().await?;
@@ -296,7 +298,8 @@ impl SubsonicClient {
 
     /// Get playlist details with songs
     pub async fn get_playlist(&self, id: &str) -> Result<(Playlist, Vec<Child>), SubsonicError> {
-        let url = self.build_url(&format!("getPlaylist?id={}", id))?;
+        let mut url = self.build_url("getPlaylist")?;
+        url.query_pairs_mut().append_pair("id", id);
         debug!("Fetching playlist: {}", id);
 
         let response = self.http.get(url).send().await?;
@@ -360,31 +363,39 @@ impl SubsonicClient {
     }
 
     pub async fn unstar_song(&self, song_id: &str) -> Result<(), SubsonicError> {
-        self.request::<()>(&format!("unstar?id={}", song_id)).await
+        let mut url = self.build_url("unstar")?;
+        url.query_pairs_mut().append_pair("id", song_id);
+        self.request_url::<()>(url).await
     }
 
     pub async fn star_song(&self, song_id: &str) -> Result<(), SubsonicError> {
-        self.request::<()>(&format!("star?id={}", song_id)).await
+        let mut url = self.build_url("star")?;
+        url.query_pairs_mut().append_pair("id", song_id);
+        self.request_url::<()>(url).await
     }
 
     pub async fn unstar_artist(&self, artist_id: &str) -> Result<(), SubsonicError> {
-        self.request::<()>(&format!("unstar?artistId={}", artist_id))
-            .await
+        let mut url = self.build_url("unstar")?;
+        url.query_pairs_mut().append_pair("artistId", artist_id);
+        self.request_url::<()>(url).await
     }
 
     pub async fn star_artist(&self, artist_id: &str) -> Result<(), SubsonicError> {
-        self.request::<()>(&format!("star?artistId={}", artist_id))
-            .await
+        let mut url = self.build_url("star")?;
+        url.query_pairs_mut().append_pair("artistId", artist_id);
+        self.request_url::<()>(url).await
     }
 
     pub async fn unstar_album(&self, album_id: &str) -> Result<(), SubsonicError> {
-        self.request::<()>(&format!("unstar?albumId={}", album_id))
-            .await
+        let mut url = self.build_url("unstar")?;
+        url.query_pairs_mut().append_pair("albumId", album_id);
+        self.request_url::<()>(url).await
     }
 
     pub async fn star_album(&self, album_id: &str) -> Result<(), SubsonicError> {
-        self.request::<()>(&format!("star?albumId={}", album_id))
-            .await
+        let mut url = self.build_url("star")?;
+        url.query_pairs_mut().append_pair("albumId", album_id);
+        self.request_url::<()>(url).await
     }
 
     /// Scrobble a track to the server.
@@ -393,11 +404,11 @@ impl SubsonicClient {
     /// (the standard Last.fm/Subsonic convention), or `false` to signal that
     /// the track is now playing (a "now-playing" notification).
     pub async fn scrobble(&self, song_id: &str, submission: bool) -> Result<(), SubsonicError> {
-        self.request::<()>(&format!(
-            "scrobble?id={}&submission={}",
-            song_id, submission
-        ))
-        .await
+        let mut url = self.build_url("scrobble")?;
+        url.query_pairs_mut()
+            .append_pair("id", song_id)
+            .append_pair("submission", &submission.to_string());
+        self.request_url::<()>(url).await
     }
 }
 

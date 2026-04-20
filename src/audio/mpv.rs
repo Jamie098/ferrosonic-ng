@@ -133,6 +133,14 @@ impl MpvController {
 
     /// Send a command to MPV
     fn send_command(&mut self, args: Vec<Value>) -> Result<Option<Value>, AudioError> {
+        let result = self.try_send_command(args);
+        if matches!(&result, Err(AudioError::MpvIpc(_) | AudioError::MpvSocket(_))) {
+            self.socket = None;
+        }
+        result
+    }
+
+    fn try_send_command(&mut self, args: Vec<Value>) -> Result<Option<Value>, AudioError> {
         let socket = self.socket.as_mut().ok_or(AudioError::MpvNotRunning)?;
 
         let request_id = self.request_id.fetch_add(1, Ordering::SeqCst);
