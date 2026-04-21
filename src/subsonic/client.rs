@@ -133,9 +133,19 @@ impl SubsonicClient {
     pub async fn get_starred_songs(&self) -> Result<Vec<Child>, SubsonicError> {
         let data: StarredSongsData = self.request("getStarred2").await?;
         let songs = data.starred_songs.song;
-
-        debug!("Fetched {} songs", songs.len());
+        debug!("Fetched {} starred songs", songs.len());
         Ok(songs)
+    }
+
+    pub async fn get_starred_albums(&self) -> Result<Vec<Album>, SubsonicError> {
+        let data: StarredSongsData = self.request("getStarred2").await?;
+        let albums = data.starred_songs.album;
+        debug!("Fetched {} starred albums", albums.len());
+        Ok(albums)
+    }
+
+    pub async fn get_random_albums(&self, count: usize) -> Result<Vec<Album>, SubsonicError> {
+        self.get_album_list("random", count, 0).await
     }
 
     /// Search for songs via `search3`.
@@ -286,6 +296,34 @@ impl SubsonicClient {
             detail.song.len()
         );
         Ok((album, detail.song))
+    }
+
+    /// Fetch albums via getAlbumList2.
+    ///
+    /// `list_type` is one of: `alphabeticalByName`, `alphabeticalByArtist`, `newest`,
+    /// `random`, `starred`, `frequent`, `recent`, `byYear`, `byGenre`.
+    pub async fn get_album_list(
+        &self,
+        list_type: &str,
+        size: usize,
+        offset: usize,
+    ) -> Result<Vec<Album>, SubsonicError> {
+        let mut url = self.build_url("getAlbumList2")?;
+        url.query_pairs_mut()
+            .append_pair("type", list_type)
+            .append_pair("size", &size.to_string())
+            .append_pair("offset", &offset.to_string());
+        debug!(
+            "Fetching album list: type={}, size={}, offset={}",
+            list_type, size, offset
+        );
+        let data: AlbumListData = self.request_url(url).await?;
+        debug!(
+            "Fetched {} albums (offset={})",
+            data.album_list.album.len(),
+            offset
+        );
+        Ok(data.album_list.album)
     }
 
     /// Get all playlists

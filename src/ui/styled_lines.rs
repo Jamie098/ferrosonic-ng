@@ -1,4 +1,4 @@
-use crate::subsonic::models::Child;
+use crate::subsonic::models::{Album, Child};
 use crate::ui::theme::ThemeColors;
 
 use ratatui::{
@@ -83,6 +83,38 @@ pub fn get_song_without_artist_line<'a>(
         ),
     ]);
     return line;
+}
+
+pub fn get_album_line<'a>(album: &Album, is_selected: bool, colors: &ThemeColors) -> Line<'a> {
+    let is_starred = album.starred.is_some();
+    let star_indicator = if is_starred { "★ " } else { "  " };
+
+    let title_color = if is_selected {
+        colors.highlight_fg
+    } else {
+        colors.song
+    };
+    let meta_color = if is_selected {
+        colors.highlight_fg
+    } else {
+        colors.muted
+    };
+
+    let artist = album.artist.as_deref().unwrap_or("").trim();
+    let year_str = album.year.map(|y| format!("({})", y)).unwrap_or_default();
+    let meta_text = match (artist.is_empty(), year_str.is_empty()) {
+        (true, true) => String::new(),
+        (false, true) => format!(" - {}", artist),
+        (true, false) => format!(" - {}", year_str),
+        (false, false) => format!(" - {} {}", artist, year_str),
+    };
+
+    Line::from(vec![
+        Span::raw("  "),
+        Span::styled(star_indicator, Style::default().fg(colors.playing)),
+        Span::styled(album.name.clone(), Style::default().fg(title_color)),
+        Span::styled(meta_text, Style::default().fg(meta_color)),
+    ])
 }
 
 fn get_colors(is_selected: bool, is_playing: bool, colors: &ThemeColors) -> (Color, Color, Color) {

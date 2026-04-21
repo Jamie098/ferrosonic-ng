@@ -36,15 +36,25 @@ impl App {
                         let mut state = self.state.write().await;
                         state.page = tab_page;
 
-                        let should_refresh_starred = state.songs.is_starred_dirty
-                            && state.songs.selected_option == Some(SongOption::Starred);
+                        let on_starred =
+                            state.browse.selected_option == Some(SongOption::Starred);
+                        let browse_tab = state.browse.browse_tab.clone();
+                        let refresh_songs = on_starred
+                            && browse_tab == BrowseTab::Songs
+                            && state.browse.starred_songs_dirty;
+                        let refresh_albums = on_starred
+                            && browse_tab == BrowseTab::Albums
+                            && state.browse.starred_albums_dirty;
 
                         drop(state);
 
-                        if should_refresh_starred {
+                        if refresh_songs {
                             self.get_starred_songs().await;
-                            let mut state = self.state.write().await;
-                            state.songs.is_starred_dirty = false;
+                            self.state.write().await.browse.starred_songs_dirty = false;
+                        }
+                        if refresh_albums {
+                            self.get_starred_albums().await;
+                            self.state.write().await.browse.starred_albums_dirty = false;
                         }
                     }
                     HeaderRegion::PrevButton => {
@@ -109,7 +119,7 @@ impl App {
         layout: &LayoutAreas,
     ) -> Result<(), Error> {
         match page {
-            Page::Songs => self.handle_songs_click(x, y, layout).await,
+            Page::Browse => self.handle_browse_click(x, y, layout).await,
             Page::Artists => self.handle_artists_click(x, y, layout).await,
             Page::Queue => self.handle_queue_click(y, layout).await,
             Page::Playlists => self.handle_playlists_click(x, y, layout).await,
@@ -150,11 +160,22 @@ impl App {
     async fn handle_mouse_scroll_up(&mut self) -> Result<(), Error> {
         let mut state = self.state.write().await;
         match state.page {
-            Page::Songs => {
-                if state.songs.focus == 1 {
-                    if let Some(sel) = state.songs.selected_index {
-                        if sel > 0 {
-                            state.songs.selected_index = Some(sel - 1);
+            Page::Browse => {
+                if state.browse.focus == 1 {
+                    match state.browse.browse_tab {
+                        BrowseTab::Songs => {
+                            if let Some(sel) = state.browse.selected_index {
+                                if sel > 0 {
+                                    state.browse.selected_index = Some(sel - 1);
+                                }
+                            }
+                        }
+                        BrowseTab::Albums => {
+                            if let Some(sel) = state.browse.selected_album {
+                                if sel > 0 {
+                                    state.browse.selected_album = Some(sel - 1);
+                                }
+                            }
                         }
                     }
                 }
@@ -203,31 +224,65 @@ impl App {
     async fn handle_mouse_scroll_down(&mut self) -> Result<(), Error> {
         let mut state = self.state.write().await;
         match state.page {
-            Page::Songs => {
-                if state.songs.focus == 1 {
-                    let max = state.songs.songs.len().saturating_sub(1);
-                    if let Some(sel) = state.songs.selected_index {
-                        if sel < max {
-                            state.songs.selected_index = Some(sel + 1);
+            Page::Browse => {
+                if state.browse.focus == 1 {
+                    match state.browse.browse_tab {
+                        BrowseTab::Songs => {
+                            let max = state.browse.songs.len().saturating_sub(1);
+                            if let Some(sel) = state.browse.selected_index {
+                                if sel < max {
+                                    state.browse.selected_index = Some(sel + 1);
+                                }
+                            } else if !state.browse.songs.is_empty() {
+                                state.browse.selected_index = Some(0);
+                            }
+
+                            let should_load_more = state.browse.selected_option
+                                == Some(SongOption::All)
+                                && state.browse.all_songs_has_more
+                                && !state.browse.all_songs_loading
+                                && state
+                                    .browse
+                                    .selected_index
+                                    .map(|i| {
+                                        i + INFINITE_SCROLL_LOOKAHEAD >= state.browse.songs.len()
+                                    })
+                                    .unwrap_or(false);
+
+                            drop(state);
+
+                            if should_load_more {
+                                self.get_all_songs(true).await;
+                            }
                         }
-                    } else if !state.songs.songs.is_empty() {
-                        state.songs.selected_index = Some(0);
-                    }
+                        BrowseTab::Albums => {
+                            let max = state.browse.albums.len().saturating_sub(1);
+                            if let Some(sel) = state.browse.selected_album {
+                                if sel < max {
+                                    state.browse.selected_album = Some(sel + 1);
+                                }
+                            } else if !state.browse.albums.is_empty() {
+                                state.browse.selected_album = Some(0);
+                            }
 
-                    // Trigger infinite-scroll load for the All option
-                    let should_load_more = state.songs.selected_option == Some(SongOption::All)
-                        && state.songs.all_songs_has_more
-                        && !state.songs.all_songs_loading
-                        && state
-                            .songs
-                            .selected_index
-                            .map(|i| i + INFINITE_SCROLL_LOOKAHEAD >= state.songs.songs.len())
-                            .unwrap_or(false);
+                            let should_load_more = state.browse.selected_option
+                                == Some(SongOption::All)
+                                && state.browse.albums_has_more
+                                && !state.browse.albums_loading
+                                && state
+                                    .browse
+                                    .selected_album
+                                    .map(|i| {
+                                        i + INFINITE_SCROLL_LOOKAHEAD >= state.browse.albums.len()
+                                    })
+                                    .unwrap_or(false);
 
-                    drop(state);
+                            drop(state);
 
-                    if should_load_more {
-                        self.get_all_songs(true).await;
+                            if should_load_more {
+                                self.get_browse_albums(true).await;
+                            }
+                        }
                     }
                 }
             }

@@ -14,7 +14,7 @@ Ferrosonic-ng is a continuation of the original [ferrosonic](https://github.com/
 - **Gapless playback** — Next track is pre-loaded into mpv's internal playlist for seamless transitions
 - **MPRIS2 integration** — Full desktop media controls (play, pause, stop, next, previous, seek)
 - **Artist/album browser** — Tree-based navigation with expandable artists, album listings, and artist filtering
-- **Songs page** — Browse and search all, starred and random songs from your server
+- **Browse page** — Browse and search all, starred and random songs/albums from your server
 - **Playlists & queue management** — Browse server playlists, add/remove/reorder/shuffle queue, clear history
 - **Audio quality display** — Real-time sample rate, bit depth, codec, and channel layout
 - **Audio visualizer** — Integrated [cava](https://github.com/karlstav/cava) visualizer with theme-matched gradient colors

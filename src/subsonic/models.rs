@@ -37,6 +37,8 @@ pub struct StarredSongsData {
 pub struct StarredSongs {
     #[serde(default)]
     pub song: Vec<Child>,
+    #[serde(default)]
+    pub album: Vec<Album>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -256,6 +258,19 @@ pub struct Search3Data {
 pub struct SearchResult3 {
     #[serde(default)]
     pub song: Vec<Child>,
+}
+
+/// getAlbumList2 response wrapper
+#[derive(Debug, Deserialize)]
+pub struct AlbumListData {
+    #[serde(rename = "albumList2")]
+    pub album_list: AlbumListInner,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AlbumListInner {
+    #[serde(default)]
+    pub album: Vec<Album>,
 }
 
 /// Ping response (for testing connection)

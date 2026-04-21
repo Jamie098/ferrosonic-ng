@@ -4,6 +4,9 @@ impl App {
     /// Page size used by the All-songs view.
     const ALL_SONGS_PAGE_SIZE: usize = 50;
 
+    /// Page size used by the Albums view (max allowed by getAlbumList2).
+    const ALL_ALBUMS_PAGE_SIZE: usize = 500;
+
     /// Fetch the next page of songs for the "All" view via `search3`.
     ///
     /// When `append` is `false` the song list is replaced (used on first load
@@ -13,12 +16,12 @@ impl App {
         if let Some(ref client) = self.subsonic {
             let (offset, filter) = {
                 let state = self.state.read().await;
-                (state.songs.all_songs_offset, state.songs.filter.clone())
+                (state.browse.all_songs_offset, state.browse.filter.clone())
             };
 
             {
                 let mut state = self.state.write().await;
-                state.songs.all_songs_loading = true;
+                state.browse.all_songs_loading = true;
             }
 
             match client
@@ -31,22 +34,21 @@ impl App {
                     let has_more = fetched == Self::ALL_SONGS_PAGE_SIZE;
 
                     if append {
-                        state.songs.songs.extend(songs);
+                        state.browse.songs.extend(songs);
                     } else {
-                        state.songs.songs = songs;
-                        state.songs.selected_index =
-                            if fetched > 0 { Some(0) } else { None };
-                        state.songs.scroll_offset = 0;
+                        state.browse.songs = songs;
+                        state.browse.selected_index = if fetched > 0 { Some(0) } else { None };
+                        state.browse.scroll_offset = 0;
                     }
 
-                    state.songs.all_songs_offset = offset + fetched;
-                    state.songs.all_songs_has_more = has_more;
-                    state.songs.all_songs_loading = false;
+                    state.browse.all_songs_offset = offset + fetched;
+                    state.browse.all_songs_has_more = has_more;
+                    state.browse.all_songs_loading = false;
                 }
                 Err(e) => {
                     error!("Failed to load all songs: {}", e);
                     let mut state = self.state.write().await;
-                    state.songs.all_songs_loading = false;
+                    state.browse.all_songs_loading = false;
                     state.notify_error(format!("Failed to load all songs: {}", e));
                 }
             }
@@ -58,8 +60,8 @@ impl App {
             match client.get_starred_songs().await {
                 Ok(songs) => {
                     let mut state = self.state.write().await;
-                    state.songs.backing_songs = songs;
-                    state.songs.apply_filter();
+                    state.browse.backing_songs = songs;
+                    state.browse.apply_filter();
                 }
                 Err(e) => {
                     error!("Failed to load starred songs: {}", e);
@@ -77,13 +79,100 @@ impl App {
             match client.get_random_songs(random_songs_count).await {
                 Ok(songs) => {
                     let mut state = self.state.write().await;
-                    state.songs.backing_songs = songs;
-                    state.songs.apply_filter();
+                    state.browse.backing_songs = songs;
+                    state.browse.apply_filter();
                 }
                 Err(e) => {
                     error!("Failed to load random songs: {}", e);
                     let mut state = self.state.write().await;
                     state.notify_error(format!("Failed to load random songs: {}", e));
+                }
+            }
+        }
+    }
+
+    /// Fetch the next page of albums for the Albums view via `getAlbumList2`.
+    ///
+    /// When `append` is `false` the album list is replaced (used on first load or after
+    /// filter changes). When `append` is `true` new albums are appended (infinite scroll).
+    pub async fn get_browse_albums(&mut self, append: bool) {
+        if let Some(ref client) = self.subsonic {
+            let offset = {
+                let state = self.state.read().await;
+                state.browse.albums_offset
+            };
+
+            {
+                let mut state = self.state.write().await;
+                state.browse.albums_loading = true;
+            }
+
+            match client
+                .get_album_list("alphabeticalByName", Self::ALL_ALBUMS_PAGE_SIZE, offset)
+                .await
+            {
+                Ok(albums) => {
+                    let mut state = self.state.write().await;
+                    let fetched = albums.len();
+                    let has_more = fetched == Self::ALL_ALBUMS_PAGE_SIZE;
+
+                    let sel = state.browse.selected_album;
+                    let scroll = state.browse.album_scroll_offset;
+                    if append {
+                        state.browse.backing_albums.extend(albums);
+                    } else {
+                        state.browse.backing_albums = albums;
+                    }
+                    state.browse.apply_album_filter();
+                    if append {
+                        state.browse.selected_album = sel;
+                        state.browse.album_scroll_offset = scroll;
+                    }
+
+                    state.browse.albums_offset = offset + fetched;
+                    state.browse.albums_has_more = has_more;
+                    state.browse.albums_loading = false;
+                }
+                Err(e) => {
+                    error!("Failed to load albums: {}", e);
+                    let mut state = self.state.write().await;
+                    state.browse.albums_loading = false;
+                    state.notify_error(format!("Failed to load albums: {}", e));
+                }
+            }
+        }
+    }
+
+    pub async fn get_starred_albums(&mut self) {
+        if let Some(ref client) = self.subsonic {
+            match client.get_starred_albums().await {
+                Ok(albums) => {
+                    let mut state = self.state.write().await;
+                    state.browse.backing_albums = albums;
+                    state.browse.apply_album_filter();
+                }
+                Err(e) => {
+                    error!("Failed to load starred albums: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to load starred albums: {}", e));
+                }
+            }
+        }
+    }
+
+    pub async fn get_random_albums(&mut self) {
+        if let Some(ref client) = self.subsonic {
+            let random_songs_count = self.state.read().await.config.random_songs_count;
+            match client.get_random_albums(random_songs_count).await {
+                Ok(albums) => {
+                    let mut state = self.state.write().await;
+                    state.browse.backing_albums = albums;
+                    state.browse.apply_album_filter();
+                }
+                Err(e) => {
+                    error!("Failed to load random albums: {}", e);
+                    let mut state = self.state.write().await;
+                    state.notify_error(format!("Failed to load random albums: {}", e));
                 }
             }
         }
