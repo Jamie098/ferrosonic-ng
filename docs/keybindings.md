@@ -12,7 +12,7 @@ Ferrosonic is fully keyboard-driven. Vim-style `j`/`k` navigation is available a
 | `h` | Previous track |
 | `Ctrl+R` | Refresh data from server |
 | `t` | Cycle to next theme |
-| `F1` | Songs page |
+| `F1` | Browse page |
 | `F2` | Artists page |
 | `F3` | Queue page |
 | `F4` | Playlists page |

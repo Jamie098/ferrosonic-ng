@@ -4,16 +4,16 @@ pub mod actions;
 mod cava;
 mod input;
 mod input_artists;
+mod input_browse;
 mod input_playlists;
 mod input_queue;
 mod input_server;
 mod input_settings;
-mod input_songs;
 pub mod models;
 mod mouse;
 mod mouse_artists;
+mod mouse_browse;
 mod mouse_playlists;
-mod mouse_songs;
 mod notifications;
 mod playback;
 mod repo;
@@ -31,7 +31,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-use crate::app::models::SongOption;
+use crate::app::models::{BrowseTab, SongOption};
 use crate::audio::mpv::MpvController;
 use crate::audio::pipewire::PipeWireController;
 use crate::config::Config;
@@ -226,9 +226,9 @@ impl App {
     async fn load_initial_data(&mut self) {
         {
             let mut state = self.state.write().await;
-            state.songs.selected_option = Some(SongOption::All);
-            state.songs.all_songs_offset = 0;
-            state.songs.all_songs_has_more = true;
+            state.browse.selected_option = Some(SongOption::All);
+            state.browse.all_songs_offset = 0;
+            state.browse.all_songs_has_more = true;
         }
 
         self.get_all_songs(false).await;
@@ -278,13 +278,15 @@ impl App {
             if let Some(changed_at) = self.songs_filter_debounce {
                 if changed_at.elapsed() >= Duration::from_millis(FILTER_DEBOUNCE_MS) {
                     self.songs_filter_debounce = None;
-                    let is_all = self.state.read().await.songs.selected_option
-                        == Some(SongOption::All);
+                    let state = self.state.read().await;
+                    let is_all = state.browse.selected_option == Some(SongOption::All)
+                        && state.browse.browse_tab == BrowseTab::Songs;
+                    drop(state);
                     if is_all {
                         {
                             let mut state = self.state.write().await;
-                            state.songs.all_songs_offset = 0;
-                            state.songs.all_songs_has_more = true;
+                            state.browse.all_songs_offset = 0;
+                            state.browse.all_songs_has_more = true;
                         }
                         self.get_all_songs(false).await;
                     }

@@ -48,7 +48,7 @@ impl App {
             state.page == Page::Server && state.server_state.selected_field <= 2;
 
         let is_filtering = state.page == Page::Artists && state.artists.filter_active
-            || state.page == Page::Songs && state.songs.filter_active;
+            || state.page == Page::Browse && state.browse.filter_active;
 
         if (is_server_text_field && !matches!(key.code, KeyCode::F(_))) || is_filtering {
             let page = state.page;
@@ -56,7 +56,7 @@ impl App {
             return match page {
                 Page::Server => self.handle_server_key(key).await,
                 Page::Artists => self.handle_artists_key(key).await,
-                Page::Songs => self.handle_songs_key(key).await,
+                Page::Browse => self.handle_browse_key(key).await,
                 _ => Ok(()),
             };
         }
@@ -70,16 +70,25 @@ impl App {
             }
             // Page switching
             (KeyCode::F(1), _) => {
-                state.page = Page::Songs;
-                let should_refresh_starred = state.songs.is_starred_dirty
-                    && state.songs.selected_option == Some(SongOption::Starred);
+                state.page = Page::Browse;
+                let on_starred = state.browse.selected_option == Some(SongOption::Starred);
+                let browse_tab = state.browse.browse_tab.clone();
+                let refresh_songs = on_starred
+                    && browse_tab == BrowseTab::Songs
+                    && state.browse.starred_songs_dirty;
+                let refresh_albums = on_starred
+                    && browse_tab == BrowseTab::Albums
+                    && state.browse.starred_albums_dirty;
 
                 drop(state);
 
-                if should_refresh_starred {
+                if refresh_songs {
                     self.get_starred_songs().await;
-                    let mut state = self.state.write().await;
-                    state.songs.is_starred_dirty = false;
+                    self.state.write().await.browse.starred_songs_dirty = false;
+                }
+                if refresh_albums {
+                    self.get_starred_albums().await;
+                    self.state.write().await.browse.starred_albums_dirty = false;
                 }
                 return Ok(());
             }
@@ -153,7 +162,7 @@ impl App {
         let page = state.page;
         drop(state);
         match page {
-            Page::Songs => self.handle_songs_key(key).await,
+            Page::Browse => self.handle_browse_key(key).await,
             Page::Artists => self.handle_artists_key(key).await,
             Page::Queue => self.handle_queue_key(key).await,
             Page::Playlists => self.handle_playlists_key(key).await,

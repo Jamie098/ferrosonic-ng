@@ -7,17 +7,15 @@ fn make_client(server: &MockServer) -> SubsonicClient {
     SubsonicClient::new(&server.base_url(), "testuser", "testpass").unwrap()
 }
 
-// ── ping ─────────────────────────────────────────────────────────────────────
-
+// ping
 #[tokio::test]
 async fn ping_ok() {
     let server = MockServer::start_async().await;
     let mock = server
         .mock_async(|when, then| {
             when.method(GET).path("/rest/ping");
-            then.status(200).body(
-                r#"{"subsonic-response":{"status":"ok","version":"1.16.1"}}"#,
-            );
+            then.status(200)
+                .body(r#"{"subsonic-response":{"status":"ok","version":"1.16.1"}}"#);
         })
         .await;
 
@@ -53,9 +51,8 @@ async fn ping_api_error_without_error_object() {
     server
         .mock_async(|when, then| {
             when.method(GET).path("/rest/ping");
-            then.status(200).body(
-                r#"{"subsonic-response":{"status":"failed","version":"1.16.1"}}"#,
-            );
+            then.status(200)
+                .body(r#"{"subsonic-response":{"status":"failed","version":"1.16.1"}}"#);
         })
         .await;
 
@@ -78,8 +75,7 @@ async fn ping_malformed_json_returns_parse_error() {
     assert!(matches!(err, SubsonicError::Parse(_)));
 }
 
-// ── get_artists ──────────────────────────────────────────────────────────────
-
+// get_artists
 #[tokio::test]
 async fn get_artists_ok() {
     let server = MockServer::start_async().await;
@@ -149,8 +145,7 @@ async fn get_artists_api_error() {
     }
 }
 
-// ── get_artist ───────────────────────────────────────────────────────────────
-
+// get_artist
 #[tokio::test]
 async fn get_artist_ok() {
     let server = MockServer::start_async().await;
@@ -197,12 +192,14 @@ async fn get_artist_api_error() {
         })
         .await;
 
-    let err = make_client(&server).get_artist("missing").await.unwrap_err();
+    let err = make_client(&server)
+        .get_artist("missing")
+        .await
+        .unwrap_err();
     assert!(matches!(err, SubsonicError::Api { code: 70, .. }));
 }
 
-// ── get_album ────────────────────────────────────────────────────────────────
-
+// get_album
 #[tokio::test]
 async fn get_album_ok() {
     let server = MockServer::start_async().await;
@@ -258,8 +255,7 @@ async fn get_album_api_error() {
     assert!(matches!(err, SubsonicError::Api { code: 70, .. }));
 }
 
-// ── get_playlists / get_playlist ─────────────────────────────────────────────
-
+// get_playlists / get_playlist
 #[tokio::test]
 async fn get_playlists_ok() {
     let server = MockServer::start_async().await;
@@ -339,12 +335,14 @@ async fn get_playlist_api_error() {
         })
         .await;
 
-    let err = make_client(&server).get_playlist("missing").await.unwrap_err();
+    let err = make_client(&server)
+        .get_playlist("missing")
+        .await
+        .unwrap_err();
     assert!(matches!(err, SubsonicError::Api { code: 70, .. }));
 }
 
-// ── get_starred_songs ────────────────────────────────────────────────────────
-
+// get_starred_songs
 #[tokio::test]
 async fn get_starred_songs_ok() {
     let server = MockServer::start_async().await;
@@ -389,8 +387,148 @@ async fn get_starred_songs_empty() {
     assert!(songs.is_empty());
 }
 
-// ── get_random_songs ─────────────────────────────────────────────────────────
+// get_starred_albums
+#[tokio::test]
+async fn get_starred_albums_ok() {
+    let server = MockServer::start_async().await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getStarred2");
+            then.status(200).body(
+                r#"{
+                    "subsonic-response": {
+                        "status": "ok",
+                        "version": "1.16.1",
+                        "starred2": {
+                            "song": [],
+                            "album": [
+                                {"id": "al-1", "name": "Starred Album", "artist": "Some Artist", "year": 2001}
+                            ]
+                        }
+                    }
+                }"#,
+            );
+        })
+        .await;
 
+    let albums = make_client(&server).get_starred_albums().await.unwrap();
+    assert_eq!(albums.len(), 1);
+    assert_eq!(albums[0].id, "al-1");
+    assert_eq!(albums[0].name, "Starred Album");
+    assert_eq!(albums[0].artist.as_deref(), Some("Some Artist"));
+    assert_eq!(albums[0].year, Some(2001));
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn get_starred_albums_empty() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getStarred2");
+            then.status(200).body(
+                r#"{"subsonic-response":{"status":"ok","version":"1.16.1","starred2":{"song":[],"album":[]}}}"#,
+            );
+        })
+        .await;
+
+    let albums = make_client(&server).get_starred_albums().await.unwrap();
+    assert!(albums.is_empty());
+}
+
+#[tokio::test]
+async fn get_starred_albums_api_error() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getStarred2");
+            then.status(200).body(
+                r#"{"subsonic-response":{"status":"failed","version":"1.16.1","error":{"code":40,"message":"Wrong username or password"}}}"#,
+            );
+        })
+        .await;
+
+    let err = make_client(&server).get_starred_albums().await.unwrap_err();
+    assert!(matches!(err, SubsonicError::Api { code: 40, .. }));
+}
+
+// get_album_list
+#[tokio::test]
+async fn get_album_list_ok() {
+    let server = MockServer::start_async().await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/rest/getAlbumList2")
+                .query_param("type", "alphabeticalByName")
+                .query_param("size", "2")
+                .query_param("offset", "10");
+            then.status(200).body(
+                r#"{
+                    "subsonic-response": {
+                        "status": "ok",
+                        "version": "1.16.1",
+                        "albumList2": {
+                            "album": [
+                                {"id": "al-1", "name": "First Album"},
+                                {"id": "al-2", "name": "Second Album", "artist": "Artist", "year": 1999}
+                            ]
+                        }
+                    }
+                }"#,
+            );
+        })
+        .await;
+
+    let albums = make_client(&server)
+        .get_album_list("alphabeticalByName", 2, 10)
+        .await
+        .unwrap();
+    assert_eq!(albums.len(), 2);
+    assert_eq!(albums[0].id, "al-1");
+    assert_eq!(albums[1].year, Some(1999));
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn get_album_list_empty() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getAlbumList2");
+            then.status(200).body(
+                r#"{"subsonic-response":{"status":"ok","version":"1.16.1","albumList2":{"album":[]}}}"#,
+            );
+        })
+        .await;
+
+    let albums = make_client(&server)
+        .get_album_list("newest", 50, 0)
+        .await
+        .unwrap();
+    assert!(albums.is_empty());
+}
+
+#[tokio::test]
+async fn get_album_list_api_error() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getAlbumList2");
+            then.status(200).body(
+                r#"{"subsonic-response":{"status":"failed","version":"1.16.1","error":{"code":10,"message":"Required parameter is missing"}}}"#,
+            );
+        })
+        .await;
+
+    let err = make_client(&server)
+        .get_album_list("alphabeticalByName", 50, 0)
+        .await
+        .unwrap_err();
+    assert!(matches!(err, SubsonicError::Api { code: 10, .. }));
+}
+
+// get_random_songs
 #[tokio::test]
 async fn get_random_songs_ok() {
     let server = MockServer::start_async().await;
@@ -420,8 +558,7 @@ async fn get_random_songs_ok() {
     mock.assert_async().await;
 }
 
-// ── search_songs ─────────────────────────────────────────────────────────────
-
+// search_songs
 #[tokio::test]
 async fn search_songs_ok() {
     let server = MockServer::start_async().await;
@@ -453,8 +590,7 @@ async fn search_songs_ok() {
     mock.assert_async().await;
 }
 
-// ── star / unstar ─────────────────────────────────────────────────────────────
-
+// star / unstar
 #[tokio::test]
 async fn star_song_ok() {
     let server = MockServer::start_async().await;
@@ -485,8 +621,7 @@ async fn unstar_song_ok() {
     mock.assert_async().await;
 }
 
-// ── scrobble ─────────────────────────────────────────────────────────────────
-
+// scrobble
 #[tokio::test]
 async fn scrobble_submission_ok() {
     let server = MockServer::start_async().await;
@@ -502,8 +637,7 @@ async fn scrobble_submission_ok() {
     mock.assert_async().await;
 }
 
-// ── get_stream_url ────────────────────────────────────────────────────────────
-
+// get_stream_url
 #[test]
 fn get_stream_url_contains_song_id() {
     let client = SubsonicClient::new("http://example.com", "user", "pass").unwrap();
@@ -521,17 +655,15 @@ fn get_stream_url_contains_auth_params() {
     assert!(url.contains("s="));
 }
 
-// ── api error without error object (generic path via request()) ───────────────
-
+// api error without error object (generic path via request())
 #[tokio::test]
 async fn get_artists_failed_status_no_error_object() {
     let server = MockServer::start_async().await;
     server
         .mock_async(|when, then| {
             when.method(GET).path("/rest/getArtists");
-            then.status(200).body(
-                r#"{"subsonic-response":{"status":"failed","version":"1.16.1"}}"#,
-            );
+            then.status(200)
+                .body(r#"{"subsonic-response":{"status":"failed","version":"1.16.1"}}"#);
         })
         .await;
 
@@ -544,8 +676,7 @@ async fn get_artists_failed_status_no_error_object() {
     }
 }
 
-// ── malformed JSON ────────────────────────────────────────────────────────────
-
+// malformed JSON
 #[tokio::test]
 async fn get_artists_malformed_json_returns_parse_error() {
     let server = MockServer::start_async().await;

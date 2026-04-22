@@ -281,7 +281,8 @@ impl App {
                                         }
                                     }
 
-                                    state.songs.is_starred_dirty = true;
+                                    state.browse.starred_songs_dirty = true;
+                                    state.browse.starred_albums_dirty = true;
 
                                     drop(state);
                                     if is_starred {
@@ -308,7 +309,7 @@ impl App {
                                                     a.starred = Some("starred".to_string());
                                                 }
 
-                                                state.songs.is_starred_dirty = true;
+                                                state.browse.starred_albums_dirty = true;
                                             }
                                         }
                                     }
@@ -336,7 +337,7 @@ impl App {
                                 song.starred = Some("starred".to_string());
                             }
 
-                            state.songs.is_starred_dirty = true;
+                            state.browse.starred_songs_dirty = true;
 
                             drop(state);
 

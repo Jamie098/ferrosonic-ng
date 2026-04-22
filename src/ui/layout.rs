@@ -79,8 +79,8 @@ pub fn draw(frame: &mut Frame, state: &mut AppState) {
 
     // Render current page
     match state.page {
-        Page::Songs => {
-            pages::songs::render(frame, content_area, state);
+        Page::Browse => {
+            pages::browse::render(frame, content_area, state);
         }
         Page::Artists => {
             pages::artists::render(frame, content_area, state);

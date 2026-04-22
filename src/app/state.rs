@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 
 use ratatui::layout::Rect;
 
-use crate::app::models::SongOption;
+use crate::app::models::{BrowseTab, SongOption};
 use crate::config::Config;
 use crate::subsonic::models::{Album, Artist, Child, Playlist};
 use crate::ui::theme::{ThemeColors, ThemeData};
@@ -15,7 +15,7 @@ use crate::ui::theme::{ThemeColors, ThemeData};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Page {
     #[default]
-    Songs,
+    Browse,
     Artists,
     Queue,
     Playlists,
@@ -26,7 +26,7 @@ pub enum Page {
 impl Page {
     pub fn index(&self) -> usize {
         match self {
-            Page::Songs => 0,
+            Page::Browse => 0,
             Page::Artists => 1,
             Page::Queue => 2,
             Page::Playlists => 3,
@@ -37,7 +37,7 @@ impl Page {
 
     pub fn label(&self) -> &'static str {
         match self {
-            Page::Songs => "Songs",
+            Page::Browse => "Browse",
             Page::Artists => "Artists",
             Page::Queue => "Queue",
             Page::Playlists => "Playlists",
@@ -48,7 +48,7 @@ impl Page {
 
     pub fn shortcut(&self) -> &'static str {
         match self {
-            Page::Songs => "F1",
+            Page::Browse => "F1",
             Page::Artists => "F2",
             Page::Queue => "F3",
             Page::Playlists => "F4",
@@ -123,29 +123,87 @@ pub fn format_duration(seconds: f64) -> String {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct SongsState {
+pub struct BrowseState {
+    /// Top-level tab: Songs or Albums
+    pub browse_tab: BrowseTab,
+
+    // Songs tab
     /// Currently displayed songs (filtered subset for Starred/Random, paginated for All)
     pub songs: Vec<Child>,
     /// Unfiltered backing store for Starred/Random options
     pub backing_songs: Vec<Child>,
-    pub selected_option: Option<SongOption>,
     pub selected_index: Option<usize>,
-    pub focus: usize,
     pub scroll_offset: usize,
-    pub is_starred_dirty: bool,
-    /// Current filter text
-    pub filter: String,
-    /// Whether filter input is active
-    pub filter_active: bool,
+    /// Starred songs list needs refresh before next display
+    pub starred_songs_dirty: bool,
+    /// Starred albums list needs refresh before next display
+    pub starred_albums_dirty: bool,
     /// Current pagination offset for the All option
     pub all_songs_offset: usize,
     /// Whether more songs are available for the All option
     pub all_songs_has_more: bool,
     /// Whether a page of All songs is currently being fetched
     pub all_songs_loading: bool,
+
+    // Albums tab
+    /// Currently displayed albums (filtered from backing_albums)
+    pub albums: Vec<Album>,
+    /// Unfiltered album list for client-side filtering
+    pub backing_albums: Vec<Album>,
+    /// Selected album index
+    pub selected_album: Option<usize>,
+    /// Scroll offset for the album list
+    pub album_scroll_offset: usize,
+    /// Pagination offset for album list fetches
+    pub albums_offset: usize,
+    /// Whether more albums are available to page in
+    pub albums_has_more: bool,
+    /// Whether an album page is currently being fetched
+    pub albums_loading: bool,
+
+    // Shared
+    /// Focus pane:
+    ///   0 = Song/Album options pane
+    ///   1 = Songs/Albums content list
+    /// The browse tab selector is not focusable.
+    pub focus: usize,
+    /// Current filter text
+    pub filter: String,
+    /// Whether filter input is active
+    pub filter_active: bool,
+    pub selected_option: Option<SongOption>,
 }
 
-impl SongsState {
+impl BrowseState {
+    /// Filter `backing_albums` into `albums` using the current `filter` text.
+    /// Resets `selected_album` and `album_scroll_offset` after filtering.
+    pub fn apply_album_filter(&mut self) {
+        if self.filter.is_empty() {
+            self.albums = self.backing_albums.clone();
+        } else {
+            let lower = self.filter.to_lowercase();
+            self.albums = self
+                .backing_albums
+                .iter()
+                .filter(|a| {
+                    a.name.to_lowercase().contains(&lower)
+                        || a.artist
+                            .as_deref()
+                            .unwrap_or("")
+                            .to_lowercase()
+                            .contains(&lower)
+                })
+                .cloned()
+                .collect();
+        }
+        self.selected_album = if self.albums.is_empty() {
+            None
+        } else {
+            Some(0)
+        };
+        self.album_scroll_offset = 0;
+    }
+
     /// Filter `backing_songs` into `songs` using the current `filter` text.
     /// Resets `selected_index` and `scroll_offset` after filtering.
     pub fn apply_filter(&mut self) {
@@ -354,8 +412,8 @@ pub struct AppState {
     pub queue: Vec<Child>,
     /// Current position in queue
     pub queue_position: Option<usize>,
-    /// Songs page state
-    pub songs: SongsState,
+    /// Browse page state
+    pub browse: BrowseState,
     /// Artists page state
     pub artists: ArtistsState,
     /// Queue page state
@@ -419,7 +477,7 @@ impl AppState {
         // Initialize scrobbling from config
         state.settings_state.scrobble_enabled = config.scrobble;
         // Default to All songs so navigation and rendering start in sync
-        state.songs.selected_option = Some(SongOption::All);
+        state.browse.selected_option = Some(SongOption::All);
 
         state
     }

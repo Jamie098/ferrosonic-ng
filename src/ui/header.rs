@@ -39,7 +39,7 @@ impl Widget for Header {
 
         // Page tabs
         let titles: Vec<Line> = [
-            Page::Songs,
+            Page::Browse,
             Page::Artists,
             Page::Queue,
             Page::Playlists,
@@ -116,7 +116,7 @@ impl Header {
             // Tabs renders: [pad][title][pad] [divider] [pad][title][pad] ...
             // Default padding = 1 space each side. Divider = " │ " = 3 chars.
             let pages = [
-                Page::Songs,
+                Page::Browse,
                 Page::Artists,
                 Page::Queue,
                 Page::Playlists,
