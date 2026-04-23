@@ -50,38 +50,41 @@ impl<'a> Footer<'a> {
         match self.page {
             Page::Browse => {
                 binds.extend([
-                    ("/", "Search"),
                     ("Enter", "Play"),
                     ("←/→", "Songs/Albums"),
                     ("Tab", "Focus"),
+                    ("/", "Search"),
+                    ("f", "Star/Un-star"),
                 ]);
             }
             Page::Artists => {
                 binds.extend([
                     ("Enter", "Play"),
-                    ("s", "Shuffle"),
+                    ("←/→", "Focus"),
+                    ("/", "Search"),
                     ("e", "Add"),
                     ("n", "Add next"),
-                    ("/", "Search"),
-                    ("←/→", "Focus"),
+                    ("s", "Shuffle"),
+                    ("f", "Star/Un-star"),
                 ]);
             }
             Page::Queue => {
                 binds.extend([
+                    ("Enter", "Play"),
                     ("d", "Remove"),
                     ("J/K", "Move"),
                     ("s", "Shuffle"),
                     ("c", "Clear history"),
-                    ("Enter", "Play"),
+                    ("f", "Star/Un-star"),
                 ]);
             }
             Page::Playlists => {
                 binds.extend([
+                    ("Enter", "Play"),
                     ("←/→", "Focus"),
                     ("e", "Add"),
                     ("n", "Add next"),
                     ("s", "Shuffle play"),
-                    ("Enter", "Play"),
                 ]);
             }
             Page::Server => {
