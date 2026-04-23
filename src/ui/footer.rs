@@ -51,7 +51,10 @@ impl<'a> Footer<'a> {
             Page::Browse => {
                 binds.extend([
                     ("Enter", "Play"),
+                    ("e", "Add"),
+                    ("n", "Add next"),
                     ("←/→", "Songs/Albums"),
+                    ("/", "Search"),
                     ("Tab", "Focus"),
                     ("/", "Search"),
                     ("f", "Star/Un-star"),
