@@ -50,9 +50,11 @@ impl<'a> Footer<'a> {
         match self.page {
             Page::Browse => {
                 binds.extend([
-                    ("/", "Search"),
                     ("Enter", "Play"),
+                    ("e", "Add"),
+                    ("n", "Add next"),
                     ("←/→", "Songs/Albums"),
+                    ("/", "Search"),
                     ("Tab", "Focus"),
                 ]);
             }

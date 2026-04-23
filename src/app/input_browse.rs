@@ -1,6 +1,9 @@
 use crossterm::event::{self, KeyCode};
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    subsonic::models::{Album, Child},
+};
 
 use super::*;
 
@@ -302,9 +305,7 @@ impl App {
                 };
                 song.starred = new_starred.clone();
 
-                if let Some(backing) =
-                    state.browse.backing_songs.iter_mut().find(|s| s.id == id)
-                {
+                if let Some(backing) = state.browse.backing_songs.iter_mut().find(|s| s.id == id) {
                     backing.starred = new_starred;
                 }
 
@@ -322,6 +323,128 @@ impl App {
                 }
             }
 
+            // e: Add Song to queue
+            KeyCode::Char('e')
+                if state.browse.focus == 1 && state.browse.browse_tab == BrowseTab::Songs =>
+            {
+                drop(state);
+
+                let song = self.get_selected_song().await;
+                let Some(song) = song else {
+                    return Ok(());
+                };
+                let title = song.title.clone();
+
+                let mut state = self.state.write().await;
+                state.queue.push(song);
+                state.notify(format!("Added to queue: {}", title));
+            }
+
+            // e: Add Album to queue
+            KeyCode::Char('e')
+                if state.browse.focus == 1 && state.browse.browse_tab == BrowseTab::Albums =>
+            {
+                drop(state);
+
+                let album = self.get_selected_album().await;
+                let Some(album) = album else {
+                    return Ok(());
+                };
+
+                if let Some(ref client) = self.subsonic {
+                    match client.get_album(&album.id).await {
+                        Ok((_album, songs)) => {
+                            let count = songs.len();
+                            let mut state = self.state.write().await;
+
+                            state.queue.extend(songs);
+                            state.notify(format!(
+                                "Added to queue: {} ({} songs)",
+                                album.name.clone(),
+                                count
+                            ));
+                        }
+                        Err(e) => {
+                            self.state
+                                .write()
+                                .await
+                                .notify_error(format!("Failed to fetch songs for album: {}", e));
+                        }
+                    }
+                }
+            }
+
+            // n: Add Song to next in queue
+            KeyCode::Char('n')
+                if state.browse.focus == 1 && state.browse.browse_tab == BrowseTab::Songs =>
+            {
+                drop(state);
+
+                let song = self.get_selected_song().await;
+                let Some(song) = song else {
+                    return Ok(());
+                };
+
+                let title = song.title.clone();
+
+                let current_pos = {
+                    let mut state = self.state.write().await;
+                    let current_pos = state.queue_position;
+                    let insert_pos = current_pos.map(|p| p + 1).unwrap_or(0);
+                    state.queue.insert(insert_pos, song);
+                    state.notify(format!("Playing next: {}", title));
+                    current_pos
+                };
+
+                if let Some(pos) = current_pos {
+                    self.remove_stale_preloaded_track(pos).await;
+                }
+            }
+
+            // n: Add Album to next in queue
+            KeyCode::Char('n')
+                if state.browse.focus == 1 && state.browse.browse_tab == BrowseTab::Albums =>
+            {
+                drop(state);
+
+                let album = self.get_selected_album().await;
+                let Some(album) = album else {
+                    return Ok(());
+                };
+
+                if let Some(ref client) = self.subsonic {
+                    match client.get_album(&album.id).await {
+                        Ok((_album, songs)) => {
+                            let count = songs.len();
+
+                            let current_pos = {
+                                let mut state = self.state.write().await;
+                                let current_pos = state.queue_position;
+                                let insert_pos = current_pos.map(|p| p + 1).unwrap_or(0);
+
+                                state.queue.splice(insert_pos..insert_pos, songs);
+
+                                state.notify(format!(
+                                    "Playing next: {} ({} songs)",
+                                    album.name.clone(),
+                                    count
+                                ));
+                                current_pos
+                            };
+
+                            if let Some(pos) = current_pos {
+                                self.remove_stale_preloaded_track(pos).await;
+                            }
+                        }
+                        Err(e) => {
+                            self.state
+                                .write()
+                                .await
+                                .notify_error(format!("Failed to fetch songs for album: {}", e));
+                        }
+                    }
+                }
+            }
             _ => {}
         }
 
@@ -449,5 +572,45 @@ impl App {
             SongOption::Starred => self.get_starred_albums().await,
             SongOption::Random => self.get_random_albums().await,
         }
+    }
+
+    /// Remove current preloaded track
+    async fn remove_stale_preloaded_track(&mut self, queue_position: usize) {
+        let _ = self.mpv.playlist_remove(1);
+        self.preload_next_track(queue_position).await;
+    }
+
+    /// Get selected song from Browse song list
+    async fn get_selected_song(&self) -> Option<Child> {
+        let state = self.state.read().await;
+
+        let selected_song_idx = state
+            .browse
+            .selected_index
+            .filter(|&idx| idx < state.browse.songs.len());
+
+        let Some(selected_song_idx) = selected_song_idx else {
+            return None;
+        };
+
+        let song = state.browse.songs[selected_song_idx].clone();
+        Some(song)
+    }
+
+    /// Get selected album from Browse album list
+    async fn get_selected_album(&self) -> Option<Album> {
+        let state = self.state.read().await;
+
+        let selected_album_idx = state
+            .browse
+            .selected_album
+            .filter(|&idx| idx < state.browse.albums.len());
+
+        let Some(selected_album_idx) = selected_album_idx else {
+            return None;
+        };
+
+        let album = state.browse.albums[selected_album_idx].clone();
+        Some(album)
     }
 }
