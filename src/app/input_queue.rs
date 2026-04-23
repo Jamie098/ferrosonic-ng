@@ -136,6 +136,33 @@ impl App {
                     state.notify("No history to clear");
                 }
             }
+            // f: star / un-star
+            KeyCode::Char('f') => {
+                let selected_song_idx = state.queue_state.selected;
+
+                let Some(selected_song_idx) = selected_song_idx else {
+                    return Ok(());
+                };
+
+                let song = &mut state.queue[selected_song_idx];
+                let id = song.id.clone();
+                let was_starred = song.starred.is_some();
+                let new_starred = if was_starred {
+                    None
+                } else {
+                    Some("starred".to_string())
+                };
+                song.starred = new_starred.clone();
+                state.browse.starred_songs_dirty = true;
+
+                drop(state);
+
+                if was_starred {
+                    self.unstar_song(id).await;
+                } else {
+                    self.star_song(id).await;
+                }
+            }
             _ => {}
         }
 
