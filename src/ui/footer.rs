@@ -15,6 +15,7 @@ use crate::ui::theme::ThemeColors;
 pub struct Footer<'a> {
     page: Page,
     sample_rate: Option<u32>,
+    volume: Option<i32>,
     notification: Option<&'a Notification>,
     colors: ThemeColors,
 }
@@ -24,6 +25,7 @@ impl<'a> Footer<'a> {
         Self {
             page,
             sample_rate: None,
+            volume: None,
             notification: None,
             colors,
         }
@@ -31,6 +33,11 @@ impl<'a> Footer<'a> {
 
     pub fn sample_rate(mut self, rate: Option<u32>) -> Self {
         self.sample_rate = rate;
+        self
+    }
+
+    pub fn volume(mut self, volume: Option<i32>) -> Self {
+        self.volume = volume;
         self
     }
 
@@ -108,6 +115,8 @@ impl<'a> Footer<'a> {
                 binds.extend([("←/→/Enter", "Change theme")]);
             }
         }
+
+        binds.push(("+/−", "Volume"));
 
         binds
     }

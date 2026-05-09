@@ -109,6 +109,11 @@ pub fn draw(frame: &mut Frame, state: &mut AppState) {
     // Render footer
     let footer = Footer::new(state.page, colors)
         .sample_rate(state.now_playing.sample_rate)
+        .volume(if state.now_playing.volume > 0 {
+            Some(state.now_playing.volume)
+        } else {
+            None
+        })
         .notification(state.notification.as_ref());
     frame.render_widget(footer, footer_area);
 }

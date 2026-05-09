@@ -136,6 +136,16 @@ impl App {
                 drop(state);
                 return self.prev_track().await;
             }
+            (KeyCode::Char('+'), KeyModifiers::NONE) | (KeyCode::Char('='), KeyModifiers::NONE) => {
+                // Volume up
+                drop(state);
+                return self.adjust_volume(5).await;
+            }
+            (KeyCode::Char('-'), KeyModifiers::NONE) | (KeyCode::Char('_'), KeyModifiers::NONE) => {
+                // Volume down
+                drop(state);
+                return self.adjust_volume(-5).await;
+            }
             // Cycle theme (global)
             (KeyCode::Char('t'), KeyModifiers::NONE) => {
                 state.settings_state.next_theme();

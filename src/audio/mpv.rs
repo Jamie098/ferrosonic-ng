@@ -308,6 +308,12 @@ impl MpvController {
         Ok(())
     }
 
+    /// Get current volume (0-100)
+    pub fn get_volume(&mut self) -> Result<i32, AudioError> {
+        let data = self.send_command(vec![json!("get_property"), json!("volume")])?;
+        Ok(data.and_then(|v| v.as_f64()).unwrap_or(100.0) as i32)
+    }
+
     /// Get audio sample rate
     pub fn get_sample_rate(&mut self) -> Result<Option<u32>, AudioError> {
         let data = self.send_command(vec![

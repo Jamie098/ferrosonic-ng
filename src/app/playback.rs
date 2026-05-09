@@ -585,4 +585,15 @@ impl App {
             });
         }
     }
+
+    /// Adjust volume by a relative step (positive or negative)
+    pub(super) async fn adjust_volume(&mut self, step: i32) -> Result<(), Error> {
+        let current = self.mpv.get_volume().unwrap_or(100);
+        let new_volume = (current + step).clamp(0, 100);
+        let _ = self.mpv.set_volume(new_volume);
+        let mut state = self.state.write().await;
+        state.now_playing.volume = new_volume;
+        state.notify(format!("Volume: {}%", new_volume));
+        Ok(())
+    }
 }

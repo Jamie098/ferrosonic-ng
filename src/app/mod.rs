@@ -426,6 +426,8 @@ impl App {
                     }
                     AudioAction::SetVolume(vol) => {
                         let _ = self.mpv.set_volume(vol);
+                        let mut state = self.state.write().await;
+                        state.now_playing.volume = vol.clamp(0, 100);
                     }
                 }
             }
