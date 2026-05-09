@@ -98,6 +98,8 @@ pub struct NowPlaying {
     pub channels: Option<String>,
     /// Whether the current track has already been scrobbled
     pub scrobbled: bool,
+    /// Current volume (0-100)
+    pub volume: i32,
 }
 
 impl NowPlaying {
@@ -513,6 +515,14 @@ impl AppState {
     /// Get the currently playing song from the queue
     pub fn current_song(&self) -> Option<&Child> {
         self.queue_position.and_then(|pos| self.queue.get(pos))
+    }
+
+    /// Check if the current page supports seeking (e.g., not Radio or Settings)
+    pub fn current_page_is_seekable(&self) -> bool {
+        matches!(
+            self.page,
+            Page::Browse | Page::Artists | Page::Queue | Page::Playlists
+        )
     }
 
     /// Show a notification

@@ -163,6 +163,38 @@ impl App {
                 state.notify("Data refreshed");
                 return Ok(());
             }
+            // Seek forward/backward (Shift+h/Shift+l): ±5 seconds
+            (KeyCode::Char('h'), KeyModifiers::SHIFT) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(-5.0).ok();
+                }
+                return Ok(());
+            }
+            (KeyCode::Char('l'), KeyModifiers::SHIFT) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(5.0).ok();
+                }
+                return Ok(());
+            }
+            // Volume up/down: ±5
+            (KeyCode::Char('+'), KeyModifiers::SHIFT) | (KeyCode::Char(')'), KeyModifiers::SHIFT) => {
+                let vol = (state.now_playing.volume + 5).min(100);
+                state.now_playing.volume = vol;
+                state.notify(format!("Volume: {}%", vol));
+                drop(state);
+                self.mpv.set_volume(vol).ok();
+                return Ok(());
+            }
+            (KeyCode::Char('-'), KeyModifiers::NONE) | (KeyCode::Char('_'), KeyModifiers::SHIFT) => {
+                let vol = (state.now_playing.volume - 5).max(0);
+                state.now_playing.volume = vol;
+                state.notify(format!("Volume: {}%", vol));
+                drop(state);
+                self.mpv.set_volume(vol).ok();
+                return Ok(());
+            }
             _ => {}
         }
 

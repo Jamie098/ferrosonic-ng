@@ -15,6 +15,7 @@ use crate::ui::theme::ThemeColors;
 pub struct Footer<'a> {
     page: Page,
     sample_rate: Option<u32>,
+    volume: i32,
     notification: Option<&'a Notification>,
     colors: ThemeColors,
 }
@@ -24,6 +25,7 @@ impl<'a> Footer<'a> {
         Self {
             page,
             sample_rate: None,
+            volume: 100,
             notification: None,
             colors,
         }
@@ -31,6 +33,11 @@ impl<'a> Footer<'a> {
 
     pub fn sample_rate(mut self, rate: Option<u32>) -> Self {
         self.sample_rate = rate;
+        self
+    }
+
+    pub fn volume(mut self, vol: i32) -> Self {
+        self.volume = vol;
         self
     }
 
@@ -45,6 +52,8 @@ impl<'a> Footer<'a> {
             ("p/Space", "Pause"),
             ("h", "Prev"),
             ("l", "Next"),
+            ("H/L", "Seek"),
+            ("+/-", "Vol"),
         ];
 
         match self.page {
@@ -150,16 +159,17 @@ impl Widget for Footer<'_> {
             buf.set_line(chunks[0].x, chunks[0].y, &line, chunks[0].width);
         }
 
-        // Right side: sample rate / status
-        if let Some(rate) = self.sample_rate {
-            let rate_str = format!("{}kHz", rate / 1000);
-            let x = chunks[1].x + chunks[1].width.saturating_sub(rate_str.len() as u16);
-            buf.set_string(
-                x,
-                chunks[1].y,
-                &rate_str,
-                Style::default().fg(self.colors.success),
-            );
-        }
+        // Right side: sample rate / volume / status
+        let right_text = if let Some(rate) = self.sample_rate {
+            format!("Vol:{} │ {}kHz", self.volume, rate / 1000)
+        } else {
+            format!("Vol:{}", self.volume)
+        };
+        let line = Line::from(Span::styled(
+            &right_text,
+            Style::default().fg(self.colors.accent),
+        ));
+        let x = chunks[1].x + chunks[1].width.saturating_sub(line.width() as u16);
+        buf.set_line(x, chunks[1].y, &line, chunks[1].width);
     }
 }
