@@ -10,6 +10,10 @@ Ferrosonic is fully keyboard-driven. Vim-style `j`/`k` navigation is available a
 | `p` / `Space` | Toggle play/pause |
 | `l` | Next track |
 | `h` | Previous track |
+| `Shift+H` | Seek backward 5 seconds |
+| `Shift+L` | Seek forward 5 seconds |
+| `+` / `=` | Increase volume 5% |
+| `-` / `_` | Decrease volume 5% |
 | `Ctrl+R` | Refresh data from server |
 | `t` | Cycle to next theme |
 | `F1` | Browse page |

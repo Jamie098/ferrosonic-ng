@@ -96,11 +96,18 @@ pub struct NowPlaying {
     pub format: Option<String>,
     /// Audio channel layout (e.g., "Stereo", "Mono", "5.1ch")
     pub channels: Option<String>,
+    /// Current volume (0-100), persisted across track changes
+    pub volume: u8,
     /// Whether the current track has already been scrobbled
     pub scrobbled: bool,
 }
 
 impl NowPlaying {
+    /// Clamp and set volume, ensuring it stays in 0-100 range
+    pub fn set_volume(&mut self, volume: i32) {
+        self.volume = volume.clamp(0, 100) as u8;
+    }
+
     pub fn progress_percent(&self) -> f64 {
         if self.duration > 0.0 {
             (self.position / self.duration).clamp(0.0, 1.0)

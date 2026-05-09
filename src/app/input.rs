@@ -136,6 +136,44 @@ impl App {
                 drop(state);
                 return self.prev_track().await;
             }
+            // Seek forward/backward (global) — Shift+H / Shift+L
+            (KeyCode::Char('H'), KeyModifiers::SHIFT) => {
+                // Seek backward 5 seconds
+                drop(state);
+                let _ = self.mpv.seek_relative(-5.0);
+                let mut state = self.state.write().await;
+                state.now_playing.position = (state.now_playing.position - 5.0).max(0.0);
+                return Ok(());
+            }
+            (KeyCode::Char('L'), KeyModifiers::SHIFT) => {
+                // Seek forward 5 seconds
+                drop(state);
+                let _ = self.mpv.seek_relative(5.0);
+                let mut state = self.state.write().await;
+                state.now_playing.position += 5.0;
+                return Ok(());
+            }
+            // Volume control (global): +/- to adjust volume in 5% steps
+            (KeyCode::Char('+'), KeyModifiers::NONE) | (KeyCode::Char('='), KeyModifiers::NONE) => {
+                let current = state.now_playing.volume;
+                let new_volume = (current as i32 + 5).min(100);
+                state.now_playing.set_volume(new_volume);
+                let label = state.now_playing.volume;
+                state.notify(format!("Volume: {}%", label));
+                drop(state);
+                let _ = self.mpv.set_volume(new_volume);
+                return Ok(());
+            }
+            (KeyCode::Char('-'), KeyModifiers::NONE) | (KeyCode::Char('_'), KeyModifiers::NONE) => {
+                let current = state.now_playing.volume;
+                let new_volume = (current as i32 - 5).max(0);
+                state.now_playing.set_volume(new_volume);
+                let label = state.now_playing.volume;
+                state.notify(format!("Volume: {}%", label));
+                drop(state);
+                let _ = self.mpv.set_volume(new_volume);
+                return Ok(());
+            }
             // Cycle theme (global)
             (KeyCode::Char('t'), KeyModifiers::NONE) => {
                 state.settings_state.next_theme();
