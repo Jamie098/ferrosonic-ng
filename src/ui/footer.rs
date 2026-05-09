@@ -15,6 +15,7 @@ use crate::ui::theme::ThemeColors;
 pub struct Footer<'a> {
     page: Page,
     sample_rate: Option<u32>,
+    volume: u8,
     notification: Option<&'a Notification>,
     colors: ThemeColors,
 }
@@ -24,6 +25,7 @@ impl<'a> Footer<'a> {
         Self {
             page,
             sample_rate: None,
+            volume: 0,
             notification: None,
             colors,
         }
@@ -31,6 +33,11 @@ impl<'a> Footer<'a> {
 
     pub fn sample_rate(mut self, rate: Option<u32>) -> Self {
         self.sample_rate = rate;
+        self
+    }
+
+    pub fn volume(mut self, vol: u8) -> Self {
+        self.volume = vol;
         self
     }
 
@@ -151,15 +158,31 @@ impl Widget for Footer<'_> {
         }
 
         // Right side: sample rate / status
+        let mut status_spans = Vec::new();
+        // Volume indicator
+        status_spans.push(Span::styled(
+            format!("Vol: {}%", self.volume),
+            Style::default().fg(self.colors.accent),
+        ));
         if let Some(rate) = self.sample_rate {
+            status_spans.push(Span::styled(
+                " │ ",
+                Style::default().fg(self.colors.muted),
+            ));
             let rate_str = format!("{}kHz", rate / 1000);
-            let x = chunks[1].x + chunks[1].width.saturating_sub(rate_str.len() as u16);
-            buf.set_string(
-                x,
-                chunks[1].y,
-                &rate_str,
+            status_spans.push(Span::styled(
+                rate_str,
                 Style::default().fg(self.colors.success),
-            );
+            ));
         }
+        // Right-align the combined status text
+        let status_line = Line::from(status_spans);
+        let full_len = status_line.width() as u16;
+        buf.set_line(
+            chunks[1].x + chunks[1].width.saturating_sub(full_len),
+            chunks[1].y,
+            &status_line,
+            chunks[1].width,
+        );
     }
 }
