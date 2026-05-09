@@ -12,6 +12,9 @@ Ferrosonic is fully keyboard-driven. Vim-style `j`/`k` navigation is available a
 | `h` | Previous track |
 | `Ctrl+R` | Refresh data from server |
 | `t` | Cycle to next theme |
+| `←` / `→` | Seek backward/forward ±5 seconds (seekable pages only) |
+| `Shift+h` / `Shift+l` | Seek backward/forward ±5 seconds (any page) |
+| `Shift+H` / `Shift+L` | Seek backward/forward ±30 seconds (any page) |
 | `F1` | Browse page |
 | `F2` | Artists page |
 | `F3` | Queue page |

@@ -163,6 +163,51 @@ impl App {
                 state.notify("Data refreshed");
                 return Ok(());
             }
+            // Seek forward/backward (arrow keys)
+            (KeyCode::Right, KeyModifiers::NONE) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(5.0).ok();
+                }
+                return Ok(());
+            }
+            (KeyCode::Left, KeyModifiers::NONE) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(-5.0).ok();
+                }
+                return Ok(());
+            }
+            // Seek forward/backward (Shift+h/Shift+l): ±5 seconds
+            (KeyCode::Char('l'), KeyModifiers::SHIFT) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(5.0).ok();
+                }
+                return Ok(());
+            }
+            (KeyCode::Char('h'), KeyModifiers::SHIFT) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(-5.0).ok();
+                }
+                return Ok(());
+            }
+            // Seek forward/backward (Shift+H/Shift+L): ±30 seconds
+            (KeyCode::Char('L'), KeyModifiers::SHIFT) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(30.0).ok();
+                }
+                return Ok(());
+            }
+            (KeyCode::Char('H'), KeyModifiers::SHIFT) => {
+                if state.current_page_is_seekable() {
+                    drop(state);
+                    self.mpv.seek_relative(-30.0).ok();
+                }
+                return Ok(());
+            }
             _ => {}
         }
 
