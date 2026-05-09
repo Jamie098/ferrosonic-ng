@@ -154,6 +154,27 @@ impl App {
                 }
                 return Ok(());
             }
+            // Volume control (global)
+            (KeyCode::Char('+'), KeyModifiers::NONE) | (KeyCode::Char('='), KeyModifiers::NONE) => {
+                let mut state = self.state.write().await;
+                let new_vol = (state.now_playing.volume + 5).clamp(0, 100);
+                state.now_playing.volume = new_vol;
+                drop(state);
+                if let Err(e) = self.mpv.set_volume(new_vol) {
+                    error!("Failed to set volume: {}", e);
+                }
+                return Ok(());
+            }
+            (KeyCode::Char('-'), KeyModifiers::NONE) | (KeyCode::Char('_'), KeyModifiers::NONE) => {
+                let mut state = self.state.write().await;
+                let new_vol = (state.now_playing.volume - 5).clamp(0, 100);
+                state.now_playing.volume = new_vol;
+                drop(state);
+                if let Err(e) = self.mpv.set_volume(new_vol) {
+                    error!("Failed to set volume: {}", e);
+                }
+                return Ok(());
+            }
             // Ctrl+R to refresh data from server
             (KeyCode::Char('r'), KeyModifiers::CONTROL) => {
                 state.notify("Refreshing...");

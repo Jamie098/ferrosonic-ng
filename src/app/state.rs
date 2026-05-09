@@ -98,6 +98,8 @@ pub struct NowPlaying {
     pub channels: Option<String>,
     /// Whether the current track has already been scrobbled
     pub scrobbled: bool,
+    /// Volume level (0-100)
+    pub volume: i32,
 }
 
 impl NowPlaying {
