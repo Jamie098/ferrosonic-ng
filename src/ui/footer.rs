@@ -152,7 +152,7 @@ impl Widget for Footer<'_> {
 
         // Right side: sample rate / status
         if let Some(rate) = self.sample_rate {
-            let rate_str = format!("{}kHz", rate / 1000);
+            let rate_str = format_sample_rate(rate);
             let x = chunks[1].x + chunks[1].width.saturating_sub(rate_str.len() as u16);
             buf.set_string(
                 x,
@@ -161,5 +161,25 @@ impl Widget for Footer<'_> {
                 Style::default().fg(self.colors.success),
             );
         }
+    }
+}
+
+fn format_sample_rate(rate: u32) -> String {
+    if rate % 1000 == 0 {
+        format!("{}kHz", rate / 1000)
+    } else {
+        format!("{:.1}kHz", rate as f64 / 1000.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_sample_rate;
+
+    #[test]
+    fn formats_fractional_sample_rates() {
+        assert_eq!(format_sample_rate(44100), "44.1kHz");
+        assert_eq!(format_sample_rate(48000), "48kHz");
+        assert_eq!(format_sample_rate(96000), "96kHz");
     }
 }
