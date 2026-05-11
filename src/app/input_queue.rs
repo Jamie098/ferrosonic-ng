@@ -132,6 +132,10 @@ impl App {
                 } else {
                     state.queue.shuffle(&mut rng);
                 }
+                state.queue_auto_extend = false;
+                state.queue_source_offset = 0;
+                state.queue_source_has_more = false;
+                state.queue_source_filter.clear();
                 state.notify("Queue shuffled");
                 drop(state);
                 self.save_queue_sync();
@@ -143,6 +147,10 @@ impl App {
                         let removed = pos;
                         state.queue.drain(0..pos);
                         state.queue_position = Some(0);
+                        state.queue_auto_extend = false;
+                        state.queue_source_offset = 0;
+                        state.queue_source_has_more = false;
+                        state.queue_source_filter.clear();
                         // Adjust selection
                         if let Some(sel) = state.queue_state.selected {
                             if sel < pos {

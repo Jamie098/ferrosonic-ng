@@ -42,7 +42,26 @@ impl App {
                     .unwrap_or(false);
                 drop(state);
 
-                if has_next && time_remaining > 0.0 && time_remaining < 2.0 {
+                if !has_next && time_remaining > 0.0 && time_remaining < 2.0 {
+                    self.maybe_extend_queue().await;
+                    // Re-check after possible extension
+                    let state = self.state.read().await;
+                    let has_next_now = state
+                        .queue_position
+                        .map(|p| p + 1 < state.queue.len())
+                        .unwrap_or(false);
+                    drop(state);
+
+                    if has_next_now {
+                        if let Ok(count) = self.mpv.get_playlist_count() {
+                            if count < 2 {
+                                info!("Near end of track with no preloaded next — advancing early");
+                                let _ = self.next_track().await;
+                                return;
+                            }
+                        }
+                    }
+                } else if has_next && time_remaining > 0.0 && time_remaining < 2.0 {
                     if let Ok(count) = self.mpv.get_playlist_count() {
                         if count < 2 {
                             info!("Near end of track with no preloaded next — advancing early");
@@ -58,10 +77,20 @@ impl App {
                 if count == 1 {
                     let state = self.state.read().await;
                     if let Some(pos) = state.queue_position {
-                        if pos + 1 < state.queue.len() {
+                        if pos + 1 >= state.queue.len() {
                             drop(state);
-                            debug!("Playlist count is 1, re-preloading next track");
-                            self.preload_next_track(pos).await;
+                            self.maybe_extend_queue().await;
+                        } else {
+                            drop(state);
+                        }
+                        // Re-check after possible extension
+                        let state = self.state.read().await;
+                        if let Some(pos) = state.queue_position {
+                            if pos + 1 < state.queue.len() {
+                                drop(state);
+                                debug!("Playlist count is 1, re-preloading next track");
+                                self.preload_next_track(pos).await;
+                            }
                         }
                     }
                 }
@@ -82,6 +111,7 @@ impl App {
                             // for gapless transitions (same album, same format)
                             let mut state = self.state.write().await;
                             state.queue_position = Some(next_pos);
+                            state.queue_state.selected = Some(next_pos);
                             if let Some(song) = state.queue.get(next_pos).cloned() {
                                 state.now_playing.song = Some(song.clone());
                                 state.now_playing.radio_station = None;
@@ -353,6 +383,22 @@ impl App {
 
         let next_pos = match current_pos {
             Some(pos) if pos + 1 < queue_len => pos + 1,
+            Some(pos) if pos + 1 >= queue_len => {
+                self.maybe_extend_queue().await;
+                let state = self.state.read().await;
+                let queue_len = state.queue.len();
+                drop(state);
+                if pos + 1 < queue_len {
+                    pos + 1
+                } else {
+                    info!("Reached end of queue");
+                    let _ = self.mpv.stop();
+                    let mut state = self.state.write().await;
+                    state.now_playing.state = PlaybackState::Stopped;
+                    state.now_playing.position = 0.0;
+                    return Ok(());
+                }
+            }
             _ => {
                 info!("Reached end of queue");
                 let _ = self.mpv.stop();
@@ -429,6 +475,7 @@ impl App {
         {
             let mut state = self.state.write().await;
             state.queue_position = Some(pos);
+            state.queue_state.selected = Some(pos);
             state.now_playing.song = Some(song.clone());
             state.now_playing.radio_station = None;
             state.now_playing.radio_title = None;
@@ -469,6 +516,10 @@ impl App {
             state.queue.clear();
             state.queue_position = None;
             state.queue_state.selected = None;
+            state.queue_auto_extend = false;
+            state.queue_source_offset = 0;
+            state.queue_source_has_more = false;
+            state.queue_source_filter.clear();
             state.now_playing.song = None;
             state.now_playing.radio_station = Some(station.clone());
             state.now_playing.radio_title = None;
@@ -560,10 +611,94 @@ impl App {
         state.now_playing.channels = None;
         state.queue.clear();
         state.queue_position = None;
+        state.queue_state.selected = None;
+        state.queue_auto_extend = false;
+        state.queue_source_offset = 0;
+        state.queue_source_has_more = false;
+        state.queue_source_filter.clear();
         drop(state);
 
         self.save_queue().await;
         Ok(())
+    }
+
+    /// If the queue was created from Browse → All Songs and we're near the end,
+    /// fetch the next page and append it to the queue.
+    async fn maybe_extend_queue(&mut self) {
+        let (_should_extend, offset, filter) = {
+            let state = self.state.read().await;
+            if !state.queue_auto_extend {
+                return;
+            }
+            if state.browse.all_songs_loading {
+                return;
+            }
+            if !state.queue_source_has_more {
+                return;
+            }
+
+            let pos = state.queue_position.unwrap_or(0);
+            if pos + INFINITE_SCROLL_LOOKAHEAD < state.queue.len() {
+                return;
+            }
+
+            // Verify the queue still starts with browse.songs so we don't
+            // extend a queue that has been replaced from another source.
+            let browse_len = state.browse.songs.len();
+            if browse_len > 0
+                && state.queue.len() >= browse_len
+                && state
+                    .queue
+                    .iter()
+                    .zip(state.browse.songs.iter())
+                    .all(|(q, b)| q.id == b.id)
+            {
+                (
+                    true,
+                    state.queue_source_offset,
+                    state.queue_source_filter.clone(),
+                )
+            } else {
+                return;
+            }
+        };
+
+        if let Some(ref client) = self.subsonic {
+            {
+                let mut state = self.state.write().await;
+                state.browse.all_songs_loading = true;
+            }
+
+            // Must match the page size used by get_all_songs
+            const PAGE_SIZE: usize = 50;
+            match client.search_songs(&filter, offset, PAGE_SIZE).await {
+                Ok(songs) => {
+                    let fetched = songs.len();
+                    let has_more = fetched == PAGE_SIZE;
+
+                    let mut state = self.state.write().await;
+                    state.queue.extend(songs);
+                    state.queue_source_offset = offset + fetched;
+                    state.queue_source_has_more = has_more;
+                    state.browse.all_songs_loading = false;
+                    drop(state);
+                    self.save_queue_sync();
+
+                    info!(
+                        "Extended queue by {} songs (offset now {})",
+                        fetched,
+                        offset + fetched
+                    );
+                }
+                Err(e) => {
+                    error!("Failed to extend queue: {}", e);
+                    let mut state = self.state.write().await;
+                    state.browse.all_songs_loading = false;
+                    state.queue_source_has_more = false;
+                    state.notify_error(format!("Failed to extend queue: {}", e));
+                }
+            }
+        }
     }
 
     async fn notify_track_change(&mut self, pos: usize) {
