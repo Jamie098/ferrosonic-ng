@@ -21,8 +21,8 @@ impl App {
 
         match key.code {
             // Left/Right: switch between Songs and Albums
-            KeyCode::Left => {
-                if state.browse.browse_tab == BrowseTab::Albums {
+            KeyCode::Left
+                if state.browse.browse_tab == BrowseTab::Albums => {
                     state.browse.browse_tab = BrowseTab::Songs;
                     state.browse.filter.clear();
                     state.browse.focus = 0;
@@ -34,9 +34,8 @@ impl App {
                     self.load_song_option(selected_option.unwrap_or(SongOption::All))
                         .await;
                 }
-            }
-            KeyCode::Right => {
-                if state.browse.browse_tab == BrowseTab::Songs {
+            KeyCode::Right
+                if state.browse.browse_tab == BrowseTab::Songs => {
                     state.browse.browse_tab = BrowseTab::Albums;
                     state.browse.filter.clear();
                     state.browse.focus = 0;
@@ -48,7 +47,6 @@ impl App {
                     self.load_album_option(selected_option.unwrap_or(SongOption::All))
                         .await;
                 }
-            }
 
             // Activate filter
             KeyCode::Char('/') => {
@@ -73,7 +71,7 @@ impl App {
                     state.browse.selected_option = Some(opt.clone());
                     state.browse.scroll_offset = 0;
                     state.browse.album_scroll_offset = 0;
-                    let tab = state.browse.browse_tab.clone();
+                    let tab = state.browse.browse_tab;
                     drop(state);
                     match tab {
                         BrowseTab::Songs => self.load_song_option(opt).await,
@@ -94,7 +92,7 @@ impl App {
                     state.browse.selected_option = Some(opt.clone());
                     state.browse.scroll_offset = 0;
                     state.browse.album_scroll_offset = 0;
-                    let tab = state.browse.browse_tab.clone();
+                    let tab = state.browse.browse_tab;
                     drop(state);
                     match tab {
                         BrowseTab::Songs => self.load_song_option(opt).await,
@@ -505,7 +503,7 @@ impl App {
                     let mut state = self.state.write().await;
                     state.browse.filter.pop();
                     (
-                        state.browse.browse_tab.clone(),
+                        state.browse.browse_tab,
                         state.browse.selected_option.clone(),
                     )
                 };
@@ -516,7 +514,7 @@ impl App {
                     let mut state = self.state.write().await;
                     state.browse.filter.push(c);
                     (
-                        state.browse.browse_tab.clone(),
+                        state.browse.browse_tab,
                         state.browse.selected_option.clone(),
                     )
                 };
@@ -547,7 +545,7 @@ impl App {
         let (tab, option) = {
             let state = self.state.read().await;
             (
-                state.browse.browse_tab.clone(),
+                state.browse.browse_tab,
                 state.browse.selected_option.clone(),
             )
         };
@@ -617,9 +615,7 @@ impl App {
             .selected_index
             .filter(|&idx| idx < state.browse.songs.len());
 
-        let Some(selected_song_idx) = selected_song_idx else {
-            return None;
-        };
+        let selected_song_idx = selected_song_idx?;
 
         let song = state.browse.songs[selected_song_idx].clone();
         Some(song)
@@ -634,9 +630,7 @@ impl App {
             .selected_album
             .filter(|&idx| idx < state.browse.albums.len());
 
-        let Some(selected_album_idx) = selected_album_idx else {
-            return None;
-        };
+        let selected_album_idx = selected_album_idx?;
 
         let album = state.browse.albums[selected_album_idx].clone();
         Some(album)

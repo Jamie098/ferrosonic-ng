@@ -2,6 +2,8 @@
 
 use std::sync::Arc;
 use std::time::Instant;
+
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use ratatui::layout::Rect;
@@ -69,6 +71,33 @@ pub enum PlaybackState {
     Stopped,
     Playing,
     Paused,
+}
+
+/// Repeat mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum RepeatMode {
+    #[default]
+    Off,
+    All,
+    One,
+}
+
+impl RepeatMode {
+    pub fn label(&self) -> &'static str {
+        match self {
+            RepeatMode::Off => "Off",
+            RepeatMode::All => "All",
+            RepeatMode::One => "One",
+        }
+    }
+
+    pub fn next(&self) -> Self {
+        match self {
+            RepeatMode::Off => RepeatMode::All,
+            RepeatMode::All => RepeatMode::One,
+            RepeatMode::One => RepeatMode::Off,
+        }
+    }
 }
 
 /// Now playing information
@@ -472,6 +501,10 @@ pub struct AppState {
     pub server_state: ServerState,
     /// Settings page state (app preferences)
     pub settings_state: SettingsState,
+    /// Current repeat mode
+    pub repeat_mode: RepeatMode,
+    /// Current volume (0-100)
+    pub volume: u8,
     /// Whether the queue can auto-extend from Browse → All Songs
     pub queue_auto_extend: bool,
     /// Pagination offset for queue auto-extension

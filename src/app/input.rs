@@ -72,7 +72,7 @@ impl App {
             (KeyCode::F(1), _) => {
                 state.page = Page::Browse;
                 let on_starred = state.browse.selected_option == Some(SongOption::Starred);
-                let browse_tab = state.browse.browse_tab.clone();
+                let browse_tab = state.browse.browse_tab;
                 let refresh_songs = on_starred
                     && browse_tab == BrowseTab::Songs
                     && state.browse.starred_songs_dirty;
@@ -146,6 +146,37 @@ impl App {
             (KeyCode::Char('L'), KeyModifiers::SHIFT) => {
                 drop(state);
                 let _ = self.mpv.seek_relative(5.0);
+                return Ok(());
+            }
+            // Cycle repeat mode (global)
+            (KeyCode::Char('r'), KeyModifiers::NONE) => {
+                let next = state.repeat_mode.next();
+                state.repeat_mode = next;
+                state.notify(format!("Repeat: {}", next.label()));
+                drop(state);
+                self.save_queue_sync();
+                return Ok(());
+            }
+            // Volume up
+            (KeyCode::Char('+'), KeyModifiers::NONE)
+            | (KeyCode::Char('='), KeyModifiers::NONE)
+            | (KeyCode::Char('+'), KeyModifiers::SHIFT) => {
+                let new_vol = (state.volume as i16 + 5).clamp(0, 100) as u8;
+                state.volume = new_vol;
+                drop(state);
+                let _ = self.mpv.set_volume(new_vol as i32);
+                self.save_queue_sync();
+                return Ok(());
+            }
+            // Volume down
+            (KeyCode::Char('-'), KeyModifiers::NONE)
+            | (KeyCode::Char('-'), KeyModifiers::SHIFT)
+            | (KeyCode::Char('_'), KeyModifiers::SHIFT) => {
+                let new_vol = (state.volume as i16 - 5).clamp(0, 100) as u8;
+                state.volume = new_vol;
+                drop(state);
+                let _ = self.mpv.set_volume(new_vol as i32);
+                self.save_queue_sync();
                 return Ok(());
             }
             // Cycle theme (global)

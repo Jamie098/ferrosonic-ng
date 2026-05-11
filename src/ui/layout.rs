@@ -113,6 +113,8 @@ pub fn draw(frame: &mut Frame, state: &AppState, mutations: &mut RenderMutations
     // Render footer
     let footer = Footer::new(state.page, colors)
         .sample_rate(state.now_playing.sample_rate)
+        .repeat_mode(state.repeat_mode)
+        .volume(state.volume)
         .notification(state.notification.as_ref());
     frame.render_widget(footer, footer_area);
 }

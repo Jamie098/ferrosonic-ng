@@ -16,14 +16,13 @@ impl App {
             KeyCode::Left => {
                 state.playlists.focus = 0;
             }
-            KeyCode::Right => {
-                if !state.playlists.songs.is_empty() {
+            KeyCode::Right
+                if !state.playlists.songs.is_empty() => {
                     state.playlists.focus = 1;
                     if state.playlists.selected_song.is_none() {
                         state.playlists.selected_song = Some(0);
                     }
                 }
-            }
             KeyCode::Up | KeyCode::Char('k') => {
                 if state.playlists.focus == 0 {
                     // Playlist list

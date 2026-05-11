@@ -8,7 +8,7 @@ use ratatui::{
     widgets::Widget,
 };
 
-use crate::app::state::{Notification, Page};
+use crate::app::state::{Notification, Page, RepeatMode};
 use crate::ui::theme::ThemeColors;
 
 /// Footer bar widget
@@ -16,6 +16,8 @@ pub struct Footer<'a> {
     page: Page,
     sample_rate: Option<u32>,
     notification: Option<&'a Notification>,
+    repeat_mode: RepeatMode,
+    volume: u8,
     colors: ThemeColors,
 }
 
@@ -25,6 +27,8 @@ impl<'a> Footer<'a> {
             page,
             sample_rate: None,
             notification: None,
+            repeat_mode: RepeatMode::Off,
+            volume: 100,
             colors,
         }
     }
@@ -39,12 +43,24 @@ impl<'a> Footer<'a> {
         self
     }
 
+    pub fn repeat_mode(mut self, mode: RepeatMode) -> Self {
+        self.repeat_mode = mode;
+        self
+    }
+
+    pub fn volume(mut self, volume: u8) -> Self {
+        self.volume = volume;
+        self
+    }
+
     fn keybinds(&self) -> Vec<(&'static str, &'static str)> {
         let mut binds = vec![
             ("q", "Quit"),
             ("p/Space", "Pause"),
             ("h", "Prev"),
             ("l", "Next"),
+            ("r", "Repeat"),
+            ("+/-", "Volume"),
         ];
 
         match self.page {
@@ -150,7 +166,12 @@ impl Widget for Footer<'_> {
             buf.set_line(chunks[0].x, chunks[0].y, &line, chunks[0].width);
         }
 
-        // Right side: sample rate / status
+        // Right side: repeat, volume, sample rate
+        let mut status_parts = Vec::new();
+        if self.repeat_mode != RepeatMode::Off {
+            status_parts.push(format!("Repeat: {}", self.repeat_mode.label()));
+        }
+        status_parts.push(format!("Vol: {}%", self.volume));
         if let Some(rate) = self.sample_rate {
             let khz = rate as f64 / 1000.0;
             let rate_str = if khz == khz.floor() {
@@ -158,11 +179,15 @@ impl Widget for Footer<'_> {
             } else {
                 format!("{:.1}kHz", khz)
             };
-            let x = chunks[1].x + chunks[1].width.saturating_sub(rate_str.len() as u16);
+            status_parts.push(rate_str);
+        }
+        let status = status_parts.join(" | ");
+        if !status.is_empty() {
+            let x = chunks[1].x + chunks[1].width.saturating_sub(status.len() as u16);
             buf.set_string(
                 x,
                 chunks[1].y,
-                &rate_str,
+                &status,
                 Style::default().fg(self.colors.success),
             );
         }

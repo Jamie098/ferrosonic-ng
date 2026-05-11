@@ -375,6 +375,7 @@ impl App {
         let state = self.state.read().await;
         let queue_len = state.queue.len();
         let current_pos = state.queue_position;
+        let repeat_mode = state.repeat_mode;
         drop(state);
 
         if queue_len == 0 {
@@ -384,19 +385,29 @@ impl App {
         let next_pos = match current_pos {
             Some(pos) if pos + 1 < queue_len => pos + 1,
             Some(pos) if pos + 1 >= queue_len => {
-                self.maybe_extend_queue().await;
-                let state = self.state.read().await;
-                let queue_len = state.queue.len();
-                drop(state);
-                if pos + 1 < queue_len {
-                    pos + 1
+                if repeat_mode == RepeatMode::One {
+                    return self.play_queue_position(pos).await;
+                }
+                if repeat_mode == RepeatMode::All && queue_len > 0 {
+                    0
                 } else {
-                    info!("Reached end of queue");
-                    let _ = self.mpv.stop();
-                    let mut state = self.state.write().await;
-                    state.now_playing.state = PlaybackState::Stopped;
-                    state.now_playing.position = 0.0;
-                    return Ok(());
+                    self.maybe_extend_queue().await;
+                    let state = self.state.read().await;
+                    let queue_len = state.queue.len();
+                    let repeat_mode = state.repeat_mode;
+                    drop(state);
+                    if pos + 1 < queue_len {
+                        pos + 1
+                    } else if repeat_mode == RepeatMode::All && queue_len > 0 {
+                        0
+                    } else {
+                        info!("Reached end of queue");
+                        let _ = self.mpv.stop();
+                        let mut state = self.state.write().await;
+                        state.now_playing.state = PlaybackState::Stopped;
+                        state.now_playing.position = 0.0;
+                        return Ok(());
+                    }
                 }
             }
             _ => {
@@ -418,6 +429,7 @@ impl App {
         let queue_len = state.queue.len();
         let current_pos = state.queue_position;
         let position = state.now_playing.position;
+        let repeat_mode = state.repeat_mode;
         drop(state);
 
         if queue_len == 0 {
@@ -428,6 +440,8 @@ impl App {
             if let Some(pos) = current_pos {
                 if pos > 0 {
                     return self.play_queue_position(pos - 1).await;
+                } else if repeat_mode == RepeatMode::All && queue_len > 0 {
+                    return self.play_queue_position(queue_len - 1).await;
                 }
             }
             if let Err(e) = self.mpv.seek(0.0) {

@@ -55,7 +55,13 @@ impl App {
         let slave_stdout = unsafe { std::fs::File::from_raw_fd(slave) };
         let slave_stdin = unsafe { std::fs::File::from_raw_fd(slave_stdin_fd) };
         let slave_stderr = unsafe { std::fs::File::from_raw_fd(slave_stderr_fd) };
-        let config_path = std::env::temp_dir().join("ferrosonic-cava.conf");
+        let config_path = std::env::temp_dir()
+            .join(format!("ferrosonic-cava-{}", std::process::id()))
+            .join("cava.conf");
+        // Ensure parent directory exists
+        if let Some(parent) = config_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
         if let Err(e) = std::fs::write(
             &config_path,
             generate_cava_config(cava_gradient, cava_horizontal_gradient),
@@ -63,6 +69,7 @@ impl App {
             error!("Failed to write cava config: {}", e);
             return;
         }
+        self.cava_config_path = Some(config_path.clone());
         let mut cmd = std::process::Command::new("cava");
         cmd.arg("-p").arg(&config_path);
         cmd.stdout(std::process::Stdio::from(slave_stdout))
@@ -110,6 +117,13 @@ impl App {
         self.cava_process = None;
         self.cava_pty_master = None;
         self.cava_parser = None;
+        if let Some(ref path) = self.cava_config_path {
+            let _ = std::fs::remove_file(path);
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::remove_dir(parent);
+            }
+        }
+        self.cava_config_path = None;
     }
 
     /// Read cava pty output and snapshot screen to state

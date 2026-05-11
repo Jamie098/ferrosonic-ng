@@ -173,7 +173,9 @@ impl Widget for NowPlayingWidget<'_> {
             return;
         }
 
-        let song = self.now_playing.song.as_ref().unwrap();
+        let Some(song) = self.now_playing.song.as_ref() else {
+            return;
+        };
 
         // Build centered lines like Go version:
         // Line 1: Artist (green)

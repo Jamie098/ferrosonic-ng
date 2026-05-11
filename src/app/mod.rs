@@ -30,6 +30,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
+use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
@@ -80,6 +81,8 @@ pub struct App {
     audio_rx: mpsc::Receiver<AudioAction>,
     /// MPRIS D-Bus server
     mpris_server: Option<mpris_server::Server<MprisPlayer>>,
+    /// Path to the active cava config file (for cleanup)
+    cava_config_path: Option<std::path::PathBuf>,
 }
 
 impl App {
@@ -110,6 +113,7 @@ impl App {
             cava_process: None,
             cava_pty_master: None,
             cava_parser: None,
+            cava_config_path: None,
             last_click: None,
             songs_filter_debounce: None,
             audio_rx,
@@ -126,6 +130,11 @@ impl App {
             state.notify_error(format!("Failed to start MPV: {}. Is mpv installed?", e));
             drop(state);
         } else {
+            let vol = {
+                let state = self.state.read().await;
+                state.volume
+            };
+            let _ = self.mpv.set_volume(vol as i32);
             info!("MPV started successfully, ready for playback");
         }
 
@@ -204,6 +213,31 @@ impl App {
         // Restore queue if enabled
         self.restore_queue().await;
 
+        // Spawn signal handler for graceful shutdown
+        let state_for_signal = self.state.clone();
+        tokio::spawn(async move {
+            let mut sigint = match signal(SignalKind::interrupt()) {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("Failed to register SIGINT handler: {}", e);
+                    return;
+                }
+            };
+            let mut sigterm = match signal(SignalKind::terminate()) {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("Failed to register SIGTERM handler: {}", e);
+                    return;
+                }
+            };
+            tokio::select! {
+                _ = sigint.recv() => info!("Received SIGINT, shutting down gracefully"),
+                _ = sigterm.recv() => info!("Received SIGTERM, shutting down gracefully"),
+            }
+            let mut state = state_for_signal.write().await;
+            state.should_quit = true;
+        });
+
         // Main event loop
         let result = self.event_loop(&mut terminal).await;
 
@@ -215,6 +249,11 @@ impl App {
 
         // Cleanup MPV
         let _ = self.mpv.quit();
+
+        // Restore PipeWire sample rate
+        if let Err(e) = self.pipewire.restore_original() {
+            warn!("Failed to restore PipeWire sample rate: {}", e);
+        }
 
         // Cleanup terminal
         disable_raw_mode().map_err(UiError::TerminalInit)?;
@@ -261,6 +300,8 @@ impl App {
                 let queue_len = persisted.queue.len();
                 state.queue = persisted.queue;
                 state.queue_position = persisted.queue_position;
+                state.repeat_mode = persisted.repeat_mode;
+                state.volume = persisted.volume;
 
                 // Restore queue selection
                 if let Some(pos) = state.queue_position {
@@ -274,8 +315,8 @@ impl App {
                 }
 
                 info!(
-                    "Queue restored: {} songs, position: {:?}",
-                    queue_len, state.queue_position
+                    "Queue restored: {} songs, position: {:?}, repeat: {:?}, vol: {}",
+                    queue_len, state.queue_position, state.repeat_mode, state.volume
                 );
                 drop(state);
             }
@@ -288,6 +329,8 @@ impl App {
         let save_queue = state.config.save_queue;
         let queue = state.queue.clone();
         let queue_position = state.queue_position;
+        let repeat_mode = state.repeat_mode;
+        let volume = state.volume;
         drop(state);
 
         if !save_queue {
@@ -299,6 +342,8 @@ impl App {
         let persist = crate::config::queue::QueuePersist {
             queue,
             queue_position,
+            repeat_mode,
+            volume,
         };
 
         if let Err(e) = persist.save_default() {
@@ -309,7 +354,7 @@ impl App {
     /// Save queue to persistence file (non-async, for use in input handlers)
     fn save_queue_sync(&self) {
         // Clone what we need while holding the lock briefly
-        let (save_queue, queue, queue_position) = {
+        let (save_queue, queue, queue_position, repeat_mode, volume) = {
             let Ok(state) = self.state.try_read() else {
                 return;
             };
@@ -317,6 +362,8 @@ impl App {
                 state.config.save_queue,
                 state.queue.clone(),
                 state.queue_position,
+                state.repeat_mode,
+                state.volume,
             )
         };
 
@@ -328,6 +375,8 @@ impl App {
         let persist = crate::config::queue::QueuePersist {
             queue,
             queue_position,
+            repeat_mode,
+            volume,
         };
 
         if let Err(e) = persist.save_default() {

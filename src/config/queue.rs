@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::{debug, info};
 
+use crate::app::state::RepeatMode;
 use crate::subsonic::models::Child;
 
 /// Persisted queue state
@@ -15,6 +16,16 @@ pub struct QueuePersist {
     /// Current position in queue
     #[serde(default)]
     pub queue_position: Option<usize>,
+    /// Repeat mode
+    #[serde(default)]
+    pub repeat_mode: RepeatMode,
+    /// Volume (0-100)
+    #[serde(default = "default_volume")]
+    pub volume: u8,
+}
+
+fn default_volume() -> u8 {
+    100
 }
 
 impl QueuePersist {

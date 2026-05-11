@@ -15,16 +15,14 @@ impl App {
 
             match key.code {
                 // Navigate between fields
-                KeyCode::Up | KeyCode::Char('k') => {
-                    if field > 0 {
+                KeyCode::Up | KeyCode::Char('k')
+                    if field > 0 => {
                         state.settings_state.selected_field = field - 1;
                     }
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    if field < 5 {
+                KeyCode::Down | KeyCode::Char('j')
+                    if field < 5 => {
                         state.settings_state.selected_field = field + 1;
                     }
-                }
                 // Left
                 KeyCode::Left | KeyCode::Char('h') => match field {
                     0 => {

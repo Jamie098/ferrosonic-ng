@@ -16,16 +16,14 @@ impl App {
 
         match key.code {
             // Navigation - always works
-            KeyCode::Up => {
-                if field > 0 {
+            KeyCode::Up
+                if field > 0 => {
                     state.server_state.selected_field -= 1;
                 }
-            }
-            KeyCode::Down => {
-                if field < 4 {
+            KeyCode::Down
+                if field < 4 => {
                     state.server_state.selected_field += 1;
                 }
-            }
             KeyCode::Tab => {
                 // Tab moves to next field, wrapping around
                 state.server_state.selected_field = (field + 1) % 5;

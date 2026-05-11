@@ -26,7 +26,7 @@ impl App {
         let search_area = chunks[2];
         let list_area = chunks[3];
 
-        let browse_tab = self.state.read().await.browse.browse_tab.clone();
+        let browse_tab = self.state.read().await.browse.browse_tab;
 
         if y >= tab_area.y && y < tab_area.y + tab_area.height {
             let Some(new_tab) = crate::ui::pages::browse::tab_at_column(tab_area.x, x) else {
@@ -36,7 +36,7 @@ impl App {
 
             let mut state = self.state.write().await;
             if state.browse.browse_tab != new_tab {
-                state.browse.browse_tab = new_tab.clone();
+                state.browse.browse_tab = new_tab;
                 state.browse.filter.clear();
                 state.browse.focus = 0;
                 let selected_option = state.browse.selected_option.clone();
@@ -79,7 +79,7 @@ impl App {
                     state.browse.selected_option = Some(opt.clone());
                     state.browse.scroll_offset = 0;
                     state.browse.album_scroll_offset = 0;
-                    let tab = state.browse.browse_tab.clone();
+                    let tab = state.browse.browse_tab;
                     drop(state);
                     match tab {
                         BrowseTab::Songs => match opt {

@@ -51,15 +51,14 @@ impl App {
             KeyCode::Left => {
                 state.artists.focus = 0;
             }
-            KeyCode::Right => {
+            KeyCode::Right
                 // Move focus to songs (right pane)
-                if !state.artists.songs.is_empty() {
+                if !state.artists.songs.is_empty() => {
                     state.artists.focus = 1;
                     if state.artists.selected_song.is_none() {
                         state.artists.selected_song = Some(0);
                     }
                 }
-            }
             KeyCode::Up | KeyCode::Char('k') => {
                 if state.artists.focus == 0 {
                     // Tree navigation
@@ -146,8 +145,8 @@ impl App {
                     }
                 }
             }
-            KeyCode::Char('s') => {
-                if state.artists.focus == 0 {
+            KeyCode::Char('s')
+                if state.artists.focus == 0 => {
                     let tree_items = build_tree_items(&state);
                     if let Some(idx) = state.artists.selected_index {
                         if let Some(item) = tree_items.get(idx) {
@@ -166,7 +165,7 @@ impl App {
                                             Ok((_artist, albums)) => {
                                                 let mut artists_songs: Vec<_> = Vec::new();
 
-                                                for (_i, album) in albums.into_iter().enumerate() {
+                                                for album in albums.into_iter() {
                                                     match client.get_album(&album.id).await {
                                                         Ok((_album, songs)) => {
                                                             artists_songs.extend(songs);
@@ -230,7 +229,7 @@ impl App {
                                                     return Ok(());
                                                 }
 
-                                                let mut shuffled_songs: Vec<_> = Vec::from(songs);
+                                                let mut shuffled_songs: Vec<_> = songs;
                                                 shuffled_songs.shuffle(&mut thread_rng());
 
                                                 let mut state = self.state.write().await;
@@ -258,7 +257,6 @@ impl App {
                         }
                     }
                 }
-            }
             KeyCode::Char('f') => {
                 if state.artists.focus == 0 {
                     let tree_items = build_tree_items(&state);
@@ -467,11 +465,10 @@ impl App {
                     }
                 }
             }
-            KeyCode::Backspace => {
-                if state.artists.focus == 1 {
+            KeyCode::Backspace
+                if state.artists.focus == 1 => {
                     state.artists.focus = 0;
                 }
-            }
             KeyCode::Char('e') => {
                 if state.artists.focus == 1 {
                     if let Some(idx) = state.artists.selected_song {

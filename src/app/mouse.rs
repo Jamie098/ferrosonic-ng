@@ -39,7 +39,7 @@ impl App {
 
                         let on_starred =
                             state.browse.selected_option == Some(SongOption::Starred);
-                        let browse_tab = state.browse.browse_tab.clone();
+                        let browse_tab = state.browse.browse_tab;
                         let refresh_songs = on_starred
                             && browse_tab == BrowseTab::Songs
                             && state.browse.starred_songs_dirty;
@@ -162,8 +162,8 @@ impl App {
     async fn handle_mouse_scroll_up(&mut self) -> Result<(), Error> {
         let mut state = self.state.write().await;
         match state.page {
-            Page::Browse => {
-                if state.browse.focus == 1 {
+            Page::Browse
+                if state.browse.focus == 1 => {
                     match state.browse.browse_tab {
                         BrowseTab::Songs => {
                             if let Some(sel) = state.browse.selected_index {
@@ -181,7 +181,6 @@ impl App {
                         }
                     }
                 }
-            }
             Page::Artists => {
                 if state.artists.focus == 0 {
                     if let Some(sel) = state.artists.selected_index {
@@ -240,8 +239,8 @@ impl App {
     async fn handle_mouse_scroll_down(&mut self) -> Result<(), Error> {
         let mut state = self.state.write().await;
         match state.page {
-            Page::Browse => {
-                if state.browse.focus == 1 {
+            Page::Browse
+                if state.browse.focus == 1 => {
                     match state.browse.browse_tab {
                         BrowseTab::Songs => {
                             let max = state.browse.songs.len().saturating_sub(1);
@@ -301,7 +300,6 @@ impl App {
                         }
                     }
                 }
-            }
             Page::Artists => {
                 if state.artists.focus == 0 {
                     let tree_items = crate::ui::pages::artists::build_tree_items(&state);

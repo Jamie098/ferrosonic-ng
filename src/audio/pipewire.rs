@@ -138,7 +138,7 @@ impl PipeWireController {
 
     /// Clear the forced sample rate (let PipeWire use default)
     pub fn clear_forced_rate(&mut self) -> Result<(), AudioError> {
-        task::block_in_place(|| Self::clear_forced_rate_blocking())?;
+        task::block_in_place(Self::clear_forced_rate_blocking)?;
         self.current_rate = None;
         Ok(())
     }

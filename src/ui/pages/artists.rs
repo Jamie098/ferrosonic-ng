@@ -239,11 +239,11 @@ fn render_songs(
                 .unwrap_or(false);
 
             let line = get_song_without_artist_line(
-                &song,
+                song,
                 is_selected,
                 is_playing,
                 has_multiple_discs,
-                &colors,
+                colors,
             );
             ListItem::new(line)
         })

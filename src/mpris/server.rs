@@ -10,7 +10,7 @@ use tracing::info;
 use url::Url;
 
 use crate::app::actions::AudioAction;
-use crate::app::state::{NowPlaying, PlaybackState, SharedState};
+use crate::app::state::{NowPlaying, PlaybackState, RepeatMode, SharedState};
 use crate::config::Config;
 use crate::subsonic::auth::generate_auth_params;
 use crate::subsonic::models::Child;
@@ -267,10 +267,21 @@ impl PlayerInterface for MprisPlayer {
     }
 
     async fn loop_status(&self) -> fdo::Result<LoopStatus> {
-        Ok(LoopStatus::None)
+        let state = self.state.read().await;
+        Ok(match state.repeat_mode {
+            RepeatMode::Off => LoopStatus::None,
+            RepeatMode::All => LoopStatus::Playlist,
+            RepeatMode::One => LoopStatus::Track,
+        })
     }
 
-    async fn set_loop_status(&self, _loop_status: LoopStatus) -> Result<()> {
+    async fn set_loop_status(&self, loop_status: LoopStatus) -> Result<()> {
+        let mut state = self.state.write().await;
+        state.repeat_mode = match loop_status {
+            LoopStatus::None => RepeatMode::Off,
+            LoopStatus::Playlist => RepeatMode::All,
+            LoopStatus::Track => RepeatMode::One,
+        };
         Ok(())
     }
 
