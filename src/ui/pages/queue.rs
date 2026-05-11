@@ -120,6 +120,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, mutations: &mut R
         .highlight_symbol("▸ ");
 
     let mut list_state = ListState::default();
+    *list_state.offset_mut() = state.queue_state.scroll_offset;
     list_state.select(state.queue_state.selected);
 
     frame.render_stateful_widget(list, area, &mut list_state);

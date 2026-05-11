@@ -211,6 +211,10 @@ impl App {
                             let mut state = self.state.write().await;
                             state.queue.clear();
                             state.queue.extend(songs);
+                            state.queue_auto_extend = false;
+                            state.queue_source_offset = 0;
+                            state.queue_source_has_more = false;
+                            state.queue_source_filter.clear();
                             state.notify(format!("Playing: {} ({} songs)", album_name, count));
                             drop(state);
                             self.save_queue_sync();
@@ -240,6 +244,20 @@ impl App {
                 state.queue.clear();
                 let songs = state.browse.songs.clone();
                 state.queue.extend(songs);
+
+                // Enable auto-extension if this is the "All" view with more pages
+                if state.browse.selected_option == Some(SongOption::All) {
+                    state.queue_auto_extend = true;
+                    state.queue_source_offset = state.browse.all_songs_offset;
+                    state.queue_source_has_more = state.browse.all_songs_has_more;
+                    state.queue_source_filter = state.browse.filter.clone();
+                } else {
+                    state.queue_auto_extend = false;
+                    state.queue_source_offset = 0;
+                    state.queue_source_has_more = false;
+                    state.queue_source_filter.clear();
+                }
+
                 drop(state);
                 self.save_queue_sync();
 

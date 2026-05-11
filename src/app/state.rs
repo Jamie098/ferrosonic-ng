@@ -472,6 +472,14 @@ pub struct AppState {
     pub server_state: ServerState,
     /// Settings page state (app preferences)
     pub settings_state: SettingsState,
+    /// Whether the queue can auto-extend from Browse → All Songs
+    pub queue_auto_extend: bool,
+    /// Pagination offset for queue auto-extension
+    pub queue_source_offset: usize,
+    /// Whether more songs are available for queue auto-extension
+    pub queue_source_has_more: bool,
+    /// Filter used when queue was created from Browse → All Songs
+    pub queue_source_filter: String,
     /// Current notification
     pub notification: Option<Notification>,
     /// Whether the app should quit
