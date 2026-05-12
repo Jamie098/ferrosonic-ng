@@ -693,9 +693,15 @@ impl App {
                     let has_more = fetched == PAGE_SIZE;
 
                     let mut state = self.state.write().await;
-                    state.queue.extend(songs);
+                    state.queue.extend(songs.clone());
                     state.queue_source_offset = offset + fetched;
                     state.queue_source_has_more = has_more;
+                    state.browse.songs.extend(songs);
+                    if state.browse.songs.len() > Self::MAX_BROWSE_SONGS {
+                        state.browse.songs.truncate(Self::MAX_BROWSE_SONGS);
+                    }
+                    state.browse.all_songs_offset = offset + fetched;
+                    state.browse.all_songs_has_more = has_more;
                     state.browse.all_songs_loading = false;
                     drop(state);
                     self.save_queue_sync();

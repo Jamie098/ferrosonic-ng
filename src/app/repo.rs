@@ -8,7 +8,7 @@ impl App {
     const ALL_ALBUMS_PAGE_SIZE: usize = 500;
 
     /// Maximum number of songs to keep in the All-songs view to prevent unbounded growth.
-    const MAX_BROWSE_SONGS: usize = 5000;
+    pub(super) const MAX_BROWSE_SONGS: usize = 5000;
 
     /// Maximum number of albums to keep in the Albums view to prevent unbounded growth.
     const MAX_BROWSE_ALBUMS: usize = 5000;
