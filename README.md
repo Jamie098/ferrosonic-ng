@@ -13,10 +13,12 @@ Ferrosonic-ng is a continuation of the original [ferrosonic](https://github.com/
 - **Bit-perfect audio** — Automatic PipeWire sample rate switching to match source material (44.1kHz, 48kHz, 96kHz, 192kHz, etc.), with the original rate restored on exit
 - **Gapless playback** — Next track is pre-loaded into mpv's internal playlist for seamless transitions
 - **MPRIS2 integration** — Full desktop media controls (play, pause, stop, next, previous, seek)
+- **Repeat mode** — Cycle between Off, All, and One-track repeat
+- **Volume control** — Adjust playback volume with `+`/`−` keys, persisted across sessions
 - **Artist/album browser** — Tree-based navigation with expandable artists, album listings, and artist filtering
 - **Browse page** — Browse and search all, starred and random songs/albums from your server
 - **Playlists & queue management** — Browse server playlists, add/remove/reorder/shuffle queue, clear history
-- **Queue persistence** — Automatically save and restore your play queue and current position on launch
+- **Queue persistence** — Automatically save and restore your play queue, position, repeat mode, and volume on launch
 - **Internet radio** — Browse and play Navidrome/Subsonic radio stations with live stream metadata when available
 - **Audio quality display** — Real-time sample rate, bit depth, codec, and channel layout
 - **Audio visualizer** — Integrated [cava](https://github.com/karlstav/cava) visualizer with theme-matched gradient colors

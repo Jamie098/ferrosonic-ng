@@ -12,6 +12,9 @@ Ferrosonic is fully keyboard-driven. Vim-style `j`/`k` navigation is available a
 | `h` | Previous track |
 | `shift + h` | Seek backward 5 seconds |
 | `shift + l` | Seek forward 5 seconds |
+| `r` | Cycle repeat mode (Off / All / One) |
+| `+` / `=` | Volume up |
+| `-` | Volume down |
 | `Ctrl+R` | Refresh data from server |
 | `t` | Cycle to next theme |
 | `F1` | Browse page |
@@ -22,16 +25,21 @@ Ferrosonic is fully keyboard-driven. Vim-style `j`/`k` navigation is available a
 | `F6` | Server configuration page |
 | `F7` | Settings page |
 
-## Songs Page (F1)
+## Browse Page (F1)
 
 | Key | Action |
 |---|---|
-| `Tab` | Switch focus between song options and song list |
+| `Tab` | Switch focus between options pane and content list |
 | `Up` / `k` | Move selection up |
 | `Down` / `j` | Move selection down |
-| `Enter` | Play selected song (queues all visible songs and starts from selection) |
+| `Left` / `Right` | Switch between Songs and Albums tabs |
+| `/` | Activate filter/search |
+| `Enter` | Play selected song or album |
+| `e` | Add selected item to end of queue |
+| `n` | Add selected item as next in queue |
+| `f` | Star / un-star selected song or album |
 
-The Songs page has two modes selectable from the options pane: **Starred** (your favourited songs) and **Random** (a random selection from the server).
+The Browse page has three options in the left pane: **All** (paginated server search), **Starred** (your favourited songs/albums), and **Random** (a random selection from the server).
 
 ## Artists Page (F2)
 
