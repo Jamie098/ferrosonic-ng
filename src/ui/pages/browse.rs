@@ -197,9 +197,7 @@ fn render_songs(
 
     let mut list_state = ListState::default();
     *list_state.offset_mut() = state.browse.scroll_offset;
-    if focused {
-        list_state.select(state.browse.selected_index);
-    }
+    list_state.select(state.browse.selected_index);
 
     frame.render_stateful_widget(list, area, &mut list_state);
     mutations.browse_scroll_offset = Some(list_state.offset());
@@ -261,9 +259,7 @@ fn render_albums(
 
     let mut list_state = ListState::default();
     *list_state.offset_mut() = state.browse.album_scroll_offset;
-    if focused {
-        list_state.select(state.browse.selected_album);
-    }
+    list_state.select(state.browse.selected_album);
 
     frame.render_stateful_widget(list, area, &mut list_state);
     mutations.browse_album_scroll_offset = Some(list_state.offset());
