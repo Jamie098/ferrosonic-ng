@@ -123,6 +123,7 @@ impl App {
                                 // Don't reset audio properties - let them update naturally
                                 // This avoids triggering PipeWire rate changes unnecessarily
                             }
+                            self.sync_browse_selection_to_playing(&mut state);
                             drop(state);
                             self.notify_track_change(next_pos).await;
 
@@ -502,6 +503,7 @@ impl App {
             state.now_playing.format = None;
             state.now_playing.channels = None;
             state.now_playing.scrobbled = false;
+            self.sync_browse_selection_to_playing(&mut state);
         }
 
         info!("Playing: {} (queue pos {})", song.title, pos);
@@ -732,6 +734,16 @@ impl App {
                 artist: song.artist.unwrap_or_default(),
                 album: song.album.unwrap_or_default(),
             });
+        }
+    }
+
+    /// If the currently playing song exists in the Browse -> Songs list,
+    /// update `browse.selected_index` so the list auto-scrolls to keep it visible.
+    fn sync_browse_selection_to_playing(&self, state: &mut AppState) {
+        if let Some(ref song) = state.now_playing.song {
+            if let Some(idx) = state.browse.songs.iter().position(|s| s.id == song.id) {
+                state.browse.selected_index = Some(idx);
+            }
         }
     }
 }
