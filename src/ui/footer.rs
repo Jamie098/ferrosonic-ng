@@ -72,7 +72,6 @@ impl<'a> Footer<'a> {
                     ("←/→", "Songs/Albums"),
                     ("/", "Search"),
                     ("Tab", "Focus"),
-                    ("/", "Search"),
                     ("f", "Star/Un-star"),
                 ]);
             }
@@ -136,37 +135,10 @@ impl Widget for Footer<'_> {
         }
 
         let chunks = Layout::horizontal([Constraint::Min(40), Constraint::Length(30)]).split(area);
+        let left = chunks[0];
+        let right = chunks[1];
 
-        // Left side: keybinds or notification
-        if let Some(notif) = self.notification {
-            let style = if notif.is_error {
-                Style::default().fg(self.colors.error)
-            } else {
-                Style::default().fg(self.colors.success)
-            };
-            buf.set_string(chunks[0].x, chunks[0].y, &notif.message, style);
-        } else {
-            // Keybind hints
-            let binds = self.keybinds();
-            let mut spans = Vec::new();
-
-            for (i, (key, desc)) in binds.iter().enumerate() {
-                if i > 0 {
-                    spans.push(Span::styled(
-                        " │ ",
-                        Style::default().fg(self.colors.secondary),
-                    ));
-                }
-                spans.push(Span::styled(*key, Style::default().fg(self.colors.accent)));
-                spans.push(Span::raw(":"));
-                spans.push(Span::styled(*desc, Style::default().fg(self.colors.muted)));
-            }
-
-            let line = Line::from(spans);
-            buf.set_line(chunks[0].x, chunks[0].y, &line, chunks[0].width);
-        }
-
-        // Right side: repeat, volume, sample rate
+        // Right side: repeat, volume, sample rate (always on first row)
         let mut status_parts = Vec::new();
         if self.repeat_mode != RepeatMode::Off {
             status_parts.push(format!("Repeat: {}", self.repeat_mode.label()));
@@ -182,20 +154,66 @@ impl Widget for Footer<'_> {
             status_parts.push(rate_str);
         }
         let status = status_parts.join(" | ");
-        let max_width = chunks[1].width as usize;
+        let max_width = right.width as usize;
         if !status.is_empty() {
             let display_status = if status.len() > max_width {
                 &status[status.len() - max_width..]
             } else {
                 &status
             };
-            let x = chunks[1].x + chunks[1].width.saturating_sub(display_status.len() as u16);
+            let x = right.x + right.width.saturating_sub(display_status.len() as u16);
             buf.set_string(
                 x,
-                chunks[1].y,
+                right.y,
                 display_status,
                 Style::default().fg(self.colors.success),
             );
         }
+
+        // Left side: keybinds or notification
+        if let Some(notif) = self.notification {
+            let style = if notif.is_error {
+                Style::default().fg(self.colors.error)
+            } else {
+                Style::default().fg(self.colors.success)
+            };
+            buf.set_string(left.x, left.y, &notif.message, style);
+            return;
+        }
+
+        let binds = self.keybinds();
+        if binds.is_empty() {
+            return;
+        }
+
+        let build_line = |slice: &[(&'static str, &'static str)]| {
+            let mut spans = Vec::new();
+            for (i, (key, desc)) in slice.iter().enumerate() {
+                if i > 0 {
+                    spans.push(Span::styled(
+                        " │ ",
+                        Style::default().fg(self.colors.secondary),
+                    ));
+                }
+                spans.push(Span::styled(*key, Style::default().fg(self.colors.accent)));
+                spans.push(Span::raw(":"));
+                spans.push(Span::styled(*desc, Style::default().fg(self.colors.muted)));
+            }
+            Line::from(spans)
+        };
+
+        // If only one row available, render all keybinds on one line (truncated)
+        if area.height < 2 {
+            let line = build_line(&binds);
+            buf.set_line(left.x, left.y, &line, left.width);
+            return;
+        }
+
+        // Split keybinds across two rows
+        let mid = (binds.len() + 1) / 2;
+        let line1 = build_line(&binds[..mid]);
+        let line2 = build_line(&binds[mid..]);
+        buf.set_line(left.x, left.y, &line1, left.width);
+        buf.set_line(left.x, left.y + 1, &line2, left.width);
     }
 }
