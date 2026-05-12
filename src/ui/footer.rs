@@ -134,38 +134,19 @@ impl Widget for Footer<'_> {
             return;
         }
 
-        let chunks = Layout::horizontal([Constraint::Min(40), Constraint::Length(30)]).split(area);
+        // Give the right side a minimum of 18 so status text is never unreadable.
+        let chunks = Layout::horizontal([Constraint::Min(0), Constraint::Min(18)]).split(area);
         let left = chunks[0];
         let right = chunks[1];
 
         // Right side: repeat, volume, sample rate (always on first row)
-        let mut status_parts = Vec::new();
-        if self.repeat_mode != RepeatMode::Off {
-            status_parts.push(format!("Repeat: {}", self.repeat_mode.label()));
-        }
-        status_parts.push(format!("Vol: {}%", self.volume));
-        if let Some(rate) = self.sample_rate {
-            let khz = rate as f64 / 1000.0;
-            let rate_str = if khz == khz.floor() {
-                format!("{}kHz", khz as u32)
-            } else {
-                format!("{:.1}kHz", khz)
-            };
-            status_parts.push(rate_str);
-        }
-        let status = status_parts.join(" | ");
-        let max_width = right.width as usize;
+        let status = self.format_status(right.width as usize);
         if !status.is_empty() {
-            let display_status = if status.len() > max_width {
-                &status[status.len() - max_width..]
-            } else {
-                &status
-            };
-            let x = right.x + right.width.saturating_sub(display_status.len() as u16);
+            let x = right.x + right.width.saturating_sub(status.len() as u16);
             buf.set_string(
                 x,
                 right.y,
-                display_status,
+                &status,
                 Style::default().fg(self.colors.success),
             );
         }
@@ -215,5 +196,57 @@ impl Widget for Footer<'_> {
         let line2 = build_line(&binds[mid..]);
         buf.set_line(left.x, left.y, &line1, left.width);
         buf.set_line(left.x, left.y + 1, &line2, left.width);
+    }
+}
+
+impl Footer<'_> {
+    /// Build the status string, abbreviating parts to fit the given width.
+    fn format_status(&self, max_width: usize) -> String {
+        let rate_str = self.sample_rate.map(|rate| {
+            let khz = rate as f64 / 1000.0;
+            if khz == khz.floor() {
+                format!("{}kHz", khz as u32)
+            } else {
+                format!("{:.1}kHz", khz)
+            }
+        });
+
+        // Full form: "Repeat: All | Vol: 100% | 44.1kHz"
+        let mut parts = Vec::new();
+        if self.repeat_mode != RepeatMode::Off {
+            parts.push(format!("Repeat: {}", self.repeat_mode.label()));
+        }
+        parts.push(format!("Vol: {}%", self.volume));
+        if let Some(ref r) = rate_str {
+            parts.push(r.clone());
+        }
+        let full = parts.join(" | ");
+        if full.len() <= max_width {
+            return full;
+        }
+
+        // Short form: "R:All | V:100% | 44.1kHz"
+        parts.clear();
+        if self.repeat_mode != RepeatMode::Off {
+            parts.push(format!("R:{}", self.repeat_mode.label()));
+        }
+        parts.push(format!("V:{}%", self.volume));
+        if let Some(ref r) = rate_str {
+            parts.push(r.clone());
+        }
+        let short = parts.join(" | ");
+        if short.len() <= max_width {
+            return short;
+        }
+
+        // Minimal form: just volume (and sample rate if it fits)
+        let mut minimal = format!("V:{}%", self.volume);
+        if let Some(ref r) = rate_str {
+            let with_rate = format!("{} | {}", minimal, r);
+            if with_rate.len() <= max_width {
+                minimal = with_rate;
+            }
+        }
+        minimal
     }
 }
