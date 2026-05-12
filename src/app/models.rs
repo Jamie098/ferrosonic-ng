@@ -7,7 +7,7 @@ pub enum BrowseTab {
     Albums,
 }
 
-#[derive(Display, EnumIter, Clone, Debug, PartialEq)]
+#[derive(Display, EnumIter, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SongOption {
     All,
     Starred,

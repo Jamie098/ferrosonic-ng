@@ -182,12 +182,18 @@ impl Widget for Footer<'_> {
             status_parts.push(rate_str);
         }
         let status = status_parts.join(" | ");
+        let max_width = chunks[1].width as usize;
         if !status.is_empty() {
-            let x = chunks[1].x + chunks[1].width.saturating_sub(status.len() as u16);
+            let display_status = if status.len() > max_width {
+                &status[status.len() - max_width..]
+            } else {
+                &status
+            };
+            let x = chunks[1].x + chunks[1].width.saturating_sub(display_status.len() as u16);
             buf.set_string(
                 x,
                 chunks[1].y,
-                &status,
+                display_status,
                 Style::default().fg(self.colors.success),
             );
         }

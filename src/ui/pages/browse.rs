@@ -90,7 +90,6 @@ fn render_options(frame: &mut Frame, area: Rect, state: &AppState, colors: &Them
     let selected_option = state
         .browse
         .selected_option
-        .clone()
         .unwrap_or(SongOption::All);
 
     let border_style = if focused {

@@ -39,7 +39,7 @@ impl App {
                 state.browse.browse_tab = new_tab;
                 state.browse.filter.clear();
                 state.browse.focus = 0;
-                let selected_option = state.browse.selected_option.clone();
+                    let selected_option = state.browse.selected_option;
                 drop(state);
                 self.songs_filter_debounce = None;
 
@@ -76,7 +76,7 @@ impl App {
 
             if let Some(opt) = SongOption::iter().nth(row) {
                 if state.browse.selected_option.as_ref() != Some(&opt) {
-                    state.browse.selected_option = Some(opt.clone());
+                    state.browse.selected_option = Some(opt);
                     state.browse.scroll_offset = 0;
                     state.browse.album_scroll_offset = 0;
                     let tab = state.browse.browse_tab;

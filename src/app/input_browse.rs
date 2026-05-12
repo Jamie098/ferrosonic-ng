@@ -27,7 +27,7 @@ impl App {
                     state.browse.filter.clear();
                     state.browse.focus = 0;
 
-                    let selected_option = state.browse.selected_option.clone();
+                    let selected_option = state.browse.selected_option;
                     drop(state);
                     self.songs_filter_debounce = None;
 
@@ -40,7 +40,7 @@ impl App {
                     state.browse.filter.clear();
                     state.browse.focus = 0;
 
-                    let selected_option = state.browse.selected_option.clone();
+                    let selected_option = state.browse.selected_option;
                     drop(state);
                     self.songs_filter_debounce = None;
 
@@ -68,7 +68,7 @@ impl App {
                 };
 
                 if let Some(opt) = next {
-                    state.browse.selected_option = Some(opt.clone());
+                    state.browse.selected_option = Some(opt);
                     state.browse.scroll_offset = 0;
                     state.browse.album_scroll_offset = 0;
                     let tab = state.browse.browse_tab;
@@ -89,7 +89,7 @@ impl App {
                 };
 
                 if let Some(opt) = next {
-                    state.browse.selected_option = Some(opt.clone());
+                    state.browse.selected_option = Some(opt);
                     state.browse.scroll_offset = 0;
                     state.browse.album_scroll_offset = 0;
                     let tab = state.browse.browse_tab;
@@ -504,7 +504,7 @@ impl App {
                     state.browse.filter.pop();
                     (
                         state.browse.browse_tab,
-                        state.browse.selected_option.clone(),
+                        state.browse.selected_option,
                     )
                 };
                 self.apply_filter_for(tab, option).await;
@@ -515,7 +515,7 @@ impl App {
                     state.browse.filter.push(c);
                     (
                         state.browse.browse_tab,
-                        state.browse.selected_option.clone(),
+                        state.browse.selected_option,
                     )
                 };
                 self.apply_filter_for(tab, option).await;
@@ -546,7 +546,7 @@ impl App {
             let state = self.state.read().await;
             (
                 state.browse.browse_tab,
-                state.browse.selected_option.clone(),
+                state.browse.selected_option,
             )
         };
 

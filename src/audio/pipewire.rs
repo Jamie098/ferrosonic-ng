@@ -154,7 +154,7 @@ impl Default for PipeWireController {
 impl Drop for PipeWireController {
     fn drop(&mut self) {
         if let Some(rate) = self.original_rate {
-            std::thread::spawn(move || {
+            let handle = std::thread::spawn(move || {
                 if rate > 0 {
                     if let Err(e) = Self::set_rate_blocking(rate) {
                         error!("Failed to restore sample rate: {}", e);
@@ -163,6 +163,7 @@ impl Drop for PipeWireController {
                     error!("Failed to clear forced sample rate: {}", e);
                 }
             });
+            let _ = handle.join();
         }
     }
 }

@@ -379,9 +379,11 @@ impl App {
             volume,
         };
 
-        if let Err(e) = persist.save_default() {
-            warn!("Failed to save queue: {}", e);
-        }
+        tokio::task::spawn_blocking(move || {
+            if let Err(e) = persist.save_default() {
+                warn!("Failed to save queue: {}", e);
+            }
+        });
     }
 
     /// Main event loop
