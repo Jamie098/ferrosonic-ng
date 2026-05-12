@@ -52,6 +52,14 @@ impl App {
         // Dup slave fd before converting to File (from_raw_fd takes ownership)
         let slave_stdin_fd = unsafe { libc::dup(slave) };
         let slave_stderr_fd = unsafe { libc::dup(slave) };
+        if slave_stdin_fd == -1 || slave_stderr_fd == -1 {
+            error!("dup failed for slave fd");
+            unsafe {
+                libc::close(slave);
+                libc::close(master);
+            }
+            return;
+        }
         let slave_stdout = unsafe { std::fs::File::from_raw_fd(slave) };
         let slave_stdin = unsafe { std::fs::File::from_raw_fd(slave_stdin_fd) };
         let slave_stderr = unsafe { std::fs::File::from_raw_fd(slave_stderr_fd) };
@@ -67,6 +75,9 @@ impl App {
             generate_cava_config(cava_gradient, cava_horizontal_gradient),
         ) {
             error!("Failed to write cava config: {}", e);
+            unsafe {
+                libc::close(master);
+            }
             return;
         }
         self.cava_config_path = Some(config_path.clone());
@@ -78,7 +89,7 @@ impl App {
             .env("TERM", "xterm-256color");
 
         match cmd.spawn() {
-            Ok(child) => {
+            Ok(mut child) => {
                 // Set master to non-blocking
                 unsafe {
                     let flags = libc::fcntl(master, libc::F_GETFL);
@@ -87,6 +98,9 @@ impl App {
                     {
                         error!("Failed to set pty master to non-blocking mode");
                         libc::close(master);
+                        let _ = std::fs::remove_file(&config_path);
+                        self.cava_config_path = None;
+                        let _ = child.kill();
                         return;
                     }
                 }
@@ -104,6 +118,8 @@ impl App {
                 unsafe {
                     libc::close(master);
                 }
+                let _ = std::fs::remove_file(&config_path);
+                self.cava_config_path = None;
             }
         }
     }
@@ -113,6 +129,9 @@ impl App {
         if let Some(ref mut child) = self.cava_process {
             let _ = child.kill();
             let _ = child.wait();
+        }
+        if let Some(ref path) = self.cava_config_path {
+            let _ = std::fs::remove_file(path);
         }
         self.cava_process = None;
         self.cava_pty_master = None;
