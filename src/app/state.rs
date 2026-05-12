@@ -569,6 +569,8 @@ impl AppState {
         state.settings_state.save_queue_enabled = config.save_queue;
         // Default to All songs so navigation and rendering start in sync
         state.browse.selected_option = Some(SongOption::All);
+        // Default volume before any restore
+        state.volume = 100;
 
         state
     }
