@@ -369,35 +369,102 @@ pub async fn start_mpris_server(
     Ok(server)
 }
 
-/// Update MPRIS properties when state changes
+/// Snapshot of the last values emitted over MPRIS, used to avoid
+/// re-emitting unchanged properties on every mpv event tick.
+struct LastEmitted {
+    status_code: u8,
+    can_go_next: bool,
+    can_go_previous: bool,
+    can_play: bool,
+    can_seek: bool,
+    metadata_key: Option<String>,
+}
+
+static LAST_EMITTED: std::sync::Mutex<Option<LastEmitted>> = std::sync::Mutex::new(None);
+
+/// Update MPRIS properties when state changes.
+///
+/// This is called from the mpv event loop, which fires several times per
+/// second (position ticks etc.). Emitting `PropertiesChanged` on every call
+/// makes desktop widgets re-read state and re-fetch the (possibly remote)
+/// cover art each time, causing visible flicker. We therefore remember the
+/// last emitted values and only emit player flags when they change and
+/// `Metadata` when the track (or radio stream title) changes.
 pub async fn update_mpris_properties(
     server: &Server<MprisPlayer>,
     state: &SharedState,
 ) -> Result<()> {
     let state = state.read().await;
 
-    // Emit property changes
-    server
-        .properties_changed([
-            Property::PlaybackStatus(match state.now_playing.state {
-                PlaybackState::Playing => PlaybackStatus::Playing,
-                PlaybackState::Paused => PlaybackStatus::Paused,
-                PlaybackState::Stopped => PlaybackStatus::Stopped,
-            }),
-            Property::CanGoNext(
-                state
-                    .queue_position
-                    .map(|p| p + 1 < state.queue.len())
-                    .unwrap_or(false),
-            ),
-            Property::CanGoPrevious(state.queue_position.map(|p| p > 0).unwrap_or(false)),
-            Property::CanPlay(!state.queue.is_empty() || state.now_playing.radio_station.is_some()),
-            Property::CanSeek(state.now_playing.radio_station.is_none()),
-        ])
-        .await?;
+    let status_code: u8 = match state.now_playing.state {
+        PlaybackState::Playing => 0,
+        PlaybackState::Paused => 1,
+        PlaybackState::Stopped => 2,
+    };
+    let can_go_next = state
+        .queue_position
+        .map(|p| p + 1 < state.queue.len())
+        .unwrap_or(false);
+    let can_go_previous = state.queue_position.map(|p| p > 0).unwrap_or(false);
+    let can_play = !state.queue.is_empty() || state.now_playing.radio_station.is_some();
+    let can_seek = state.now_playing.radio_station.is_none();
 
-    // Update metadata if we have a current song or radio station
-    if state.current_song().is_some() || state.now_playing.radio_station.is_some() {
+    let metadata_key: Option<String> = if let Some(song) = state.current_song() {
+        Some(format!("song:{}", song.id))
+    } else if let Some(station) = state.now_playing.radio_station.as_ref() {
+        Some(format!(
+            "radio:{}:{}:{}",
+            station.id,
+            state.now_playing.radio_title.as_deref().unwrap_or(""),
+            state.now_playing.radio_artist.as_deref().unwrap_or(""),
+        ))
+    } else {
+        None
+    };
+
+    let (flags_changed, metadata_changed) = {
+        let mut last = LAST_EMITTED.lock().unwrap();
+        let (flags, meta) = match last.as_ref() {
+            Some(prev) => (
+                prev.status_code != status_code
+                    || prev.can_go_next != can_go_next
+                    || prev.can_go_previous != can_go_previous
+                    || prev.can_play != can_play
+                    || prev.can_seek != can_seek,
+                prev.metadata_key != metadata_key,
+            ),
+            None => (true, true),
+        };
+        *last = Some(LastEmitted {
+            status_code,
+            can_go_next,
+            can_go_previous,
+            can_play,
+            can_seek,
+            metadata_key: metadata_key.clone(),
+        });
+        (flags, meta)
+    };
+
+    if flags_changed {
+        server
+            .properties_changed([
+                Property::PlaybackStatus(match state.now_playing.state {
+                    PlaybackState::Playing => PlaybackStatus::Playing,
+                    PlaybackState::Paused => PlaybackStatus::Paused,
+                    PlaybackState::Stopped => PlaybackStatus::Stopped,
+                }),
+                Property::CanGoNext(can_go_next),
+                Property::CanGoPrevious(can_go_previous),
+                Property::CanPlay(can_play),
+                Property::CanSeek(can_seek),
+            ])
+            .await?;
+    }
+
+    if metadata_changed
+        && (state.current_song().is_some() || state.now_playing.radio_station.is_some())
+    {
         let metadata = build_metadata(
             &state.now_playing,
             state.current_song().cloned(),
