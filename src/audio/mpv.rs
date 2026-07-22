@@ -89,6 +89,7 @@ impl MpvController {
             .arg("--idle") // Stay running when nothing playing
             .arg("--no-video") // Audio only
             .arg("--no-terminal") // No MPV UI
+            .arg("--load-scripts=no") // No user/global mpv scripts: ferrosonic ships its own MPRIS (avoids duplicate player entries)
             .arg("--gapless-audio=yes") // Gapless playback between tracks
             .arg("--prefetch-playlist=yes") // Pre-buffer next track
             .arg("--cache=yes") // Enable cache for network streams
