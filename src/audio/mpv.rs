@@ -88,6 +88,7 @@ impl MpvController {
         let child = Command::new("mpv")
             .arg("--idle") // Stay running when nothing playing
             .arg("--no-video") // Audio only
+            .arg("--force-window=no") // Never show a window, even if user config has force-window set
             .arg("--no-terminal") // No MPV UI
             .arg("--load-scripts=no") // No user/global mpv scripts: ferrosonic ships its own MPRIS (avoids duplicate player entries)
             .arg("--gapless-audio=yes") // Gapless playback between tracks
