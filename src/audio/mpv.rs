@@ -91,7 +91,11 @@ impl MpvController {
             .arg("--force-window=no") // Never show a window, even if user config has force-window set
             .arg("--no-terminal") // No MPV UI
             .arg("--load-scripts=no") // No user/global mpv scripts: ferrosonic ships its own MPRIS (avoids duplicate player entries)
-            .arg("--gapless-audio=yes") // Gapless playback between tracks
+            // Gapless within a format, but reopen the audio device when the sample
+            // rate or format changes, so bit-perfect output follows the source.
+            // "yes" would hold the device open and resample every later track to
+            // whatever rate the first one opened it at.
+            .arg("--gapless-audio=weak")
             .arg("--prefetch-playlist=yes") // Pre-buffer next track
             .arg("--cache=yes") // Enable cache for network streams
             .arg("--cache-secs=120") // Cache up to 2 minutes ahead
