@@ -788,3 +788,145 @@ async fn get_artists_malformed_json_returns_parse_error() {
     let err = make_client(&server).get_artists().await.unwrap_err();
     assert!(matches!(err, SubsonicError::Parse(_)));
 }
+
+// get_lyrics
+#[tokio::test]
+async fn get_lyrics_modern_structured_ok() {
+    let server = MockServer::start_async().await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/rest/getLyricsBySongId")
+                .query_param("id", "s-1");
+            then.status(200).body(
+                r#"{
+                    "subsonic-response": {
+                        "status": "ok",
+                        "version": "1.16.1",
+                        "lyricsList": {
+                            "structuredLyrics": [
+                                {
+                                    "lang": "eng",
+                                    "synced": true,
+                                    "line": [
+                                        {"start": 1000, "value": "Line one"},
+                                        {"start": 2000, "value": "Line two"}
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }"#,
+            );
+        })
+        .await;
+
+    let lyrics = make_client(&server)
+        .get_lyrics("Artist", "Title", Some("s-1"))
+        .await
+        .unwrap();
+    assert_eq!(
+        lyrics.unwrap(),
+        "[00:01.00] Line one\n[00:02.00] Line two\n"
+    );
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn get_lyrics_modern_plain_ok() {
+    let server = MockServer::start_async().await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/rest/getLyricsBySongId")
+                .query_param("id", "s-1");
+            then.status(200).body(
+                r#"{
+                    "subsonic-response": {
+                        "status": "ok",
+                        "version": "1.16.1",
+                        "lyricsList": {
+                            "lyrics": [
+                                {"value": "Plain text lyrics"}
+                            ]
+                        }
+                    }
+                }"#,
+            );
+        })
+        .await;
+
+    let lyrics = make_client(&server)
+        .get_lyrics("Artist", "Title", Some("s-1"))
+        .await
+        .unwrap();
+    assert_eq!(lyrics.unwrap(), "Plain text lyrics");
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn get_lyrics_legacy_fallback_ok() {
+    let server = MockServer::start_async().await;
+    // 1. Fail modern endpoint
+    let mock_modern = server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getLyricsBySongId");
+            then.status(404);
+        })
+        .await;
+
+    // 2. Success legacy endpoint
+    let mock_legacy = server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/rest/getLyrics")
+                .query_param("artist", "Artist Name")
+                .query_param("title", "Song Title")
+                .query_param("id", "s-1");
+            then.status(200).body(
+                r#"{
+                    "subsonic-response": {
+                        "status": "ok",
+                        "version": "1.16.1",
+                        "lyrics": {
+                            "value": "Legacy lyrics content"
+                        }
+                    }
+                }"#,
+            );
+        })
+        .await;
+
+    let lyrics = make_client(&server)
+        .get_lyrics("Artist Name", "Song Title", Some("s-1"))
+        .await
+        .unwrap();
+    assert_eq!(lyrics.unwrap(), "Legacy lyrics content");
+    mock_modern.assert_async().await;
+    mock_legacy.assert_async().await;
+}
+
+#[tokio::test]
+async fn get_lyrics_none_found() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getLyricsBySongId");
+            then.status(404);
+        })
+        .await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getLyrics");
+            then.status(200).body(
+                r#"{"subsonic-response":{"status":"ok","version":"1.16.1","lyrics":[]}}"#,
+            );
+        })
+        .await;
+
+    let lyrics = make_client(&server)
+        .get_lyrics("Artist", "Title", Some("s-1"))
+        .await
+        .unwrap();
+    assert!(lyrics.is_none());
+}

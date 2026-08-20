@@ -20,17 +20,19 @@ pub enum Page {
     Queue,
     Playlists,
     Radio,
+    Lyrics,
     Server,
     Settings,
 }
 
 impl Page {
-    pub const DEFAULT_TABS: [Page; 7] = [
+    pub const DEFAULT_TABS: [Page; 8] = [
         Page::Browse,
         Page::Artists,
         Page::Queue,
         Page::Playlists,
         Page::Radio,
+        Page::Lyrics,
         Page::Server,
         Page::Settings,
     ];
@@ -42,6 +44,7 @@ impl Page {
             Page::Queue => "Queue",
             Page::Playlists => "Playlists",
             Page::Radio => "Radio",
+            Page::Lyrics => "Lyrics",
             Page::Server => "Server",
             Page::Settings => "Settings",
         }
@@ -58,6 +61,7 @@ impl Page {
             "queue" => Some(Page::Queue),
             "playlists" => Some(Page::Playlists),
             "radio" => Some(Page::Radio),
+            "lyrics" => Some(Page::Lyrics),
             "server" => Some(Page::Server),
             "settings" => Some(Page::Settings),
             _ => None,
@@ -117,6 +121,12 @@ pub struct NowPlaying {
     pub channels: Option<String>,
     /// Whether the current track has already been scrobbled
     pub scrobbled: bool,
+    /// Lyrics for the currently playing song
+    pub lyrics: Option<String>,
+    /// Parsed lyrics for the currently playing song
+    pub parsed_lyrics: Option<crate::app::models::ParsedLyrics>,
+    /// Whether we have already checked for lyrics (to avoid redundant polls)
+    pub lyrics_checked: bool,
 }
 
 impl NowPlaying {
@@ -335,6 +345,19 @@ pub struct RadioState {
     pub scroll_offset: usize,
 }
 
+/// Lyrics page state
+#[derive(Debug, Clone, Default)]
+pub struct LyricsState {
+    /// Scroll offset for the lyrics text
+    pub scroll_offset: usize,
+    /// Whether the user is manually scrolling
+    pub is_manual_scroll: bool,
+    /// Last time the user scrolled
+    pub last_scroll_time: Option<Instant>,
+    /// Visual line spacing (extra empty lines)
+    pub line_spacing: u8,
+}
+
 /// Server page state (connection settings)
 #[derive(Debug, Clone, Default)]
 pub struct ServerState {
@@ -462,6 +485,8 @@ pub struct RenderMutations {
     pub playlists_song_scroll_offset: Option<usize>,
     pub artists_tree_scroll_offset: Option<usize>,
     pub artists_song_scroll_offset: Option<usize>,
+    pub lyrics_scroll_offset: Option<usize>,
+    pub lyrics_reset_manual_scroll: Option<bool>,
 }
 
 /// Complete application state
@@ -493,6 +518,8 @@ pub struct AppState {
     pub server_state: ServerState,
     /// Settings page state (app preferences)
     pub settings_state: SettingsState,
+    /// Lyrics page state
+    pub lyrics_state: LyricsState,
     /// Current notification
     pub notification: Option<Notification>,
     /// Whether the app should quit
@@ -551,12 +578,13 @@ impl AppState {
         state.settings_state.notifications_enabled = config.notifications;
         // Initialize scrobbling from config
         state.settings_state.scrobble_enabled = config.scrobble;
-        // Initialize save queue from config
+        // Initialize save and restore queue from config
         state.settings_state.save_queue_enabled = config.save_queue;
         // Default to All songs so navigation and rendering start in sync
         state.browse.selected_option = Some(SongOption::All);
         // mpv starts at full volume; mirror that in state for the UI
         state.volume = 100;
+        state.lyrics_state = LyricsState::default();
 
         state
     }
@@ -571,7 +599,7 @@ impl AppState {
     pub fn current_song(&self) -> Option<&Child> {
         self.queue_position.and_then(|pos| self.queue.get(pos))
     }
-
+    
     /// Show a notification
     pub fn notify(&mut self, message: impl Into<String>) {
         self.notification = Some(Notification {

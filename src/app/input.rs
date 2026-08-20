@@ -69,7 +69,7 @@ impl App {
                 return Ok(());
             }
             // Page switching
-            (KeyCode::F(n), _) if (1..=7).contains(&n) => {
+            (KeyCode::F(n), _) if (1..=8).contains(&n) => {
                 let visible_pages = state.visible_pages();
                 let Some(page) = visible_pages.get(n as usize - 1).copied() else {
                     return Ok(());
@@ -186,6 +186,7 @@ impl App {
             Page::Queue => self.handle_queue_key(key).await,
             Page::Playlists => self.handle_playlists_key(key).await,
             Page::Radio => self.handle_radio_key(key).await,
+            Page::Lyrics => self.handle_lyrics_key(key).await,
             Page::Server => self.handle_server_key(key).await,
             Page::Settings => self.handle_settings_key(key).await,
         }

@@ -10,6 +10,7 @@ mod input_queue;
 mod input_radio;
 mod input_server;
 mod input_settings;
+mod input_lyrics;
 pub mod models;
 mod mouse;
 mod mouse_artists;
@@ -392,8 +393,14 @@ impl App {
                 if let Some(v) = mutations.artists_song_scroll_offset {
                     state.artists.song_scroll_offset = v;
                 }
-            }
+                if let Some(v) = mutations.lyrics_scroll_offset {
+                    state.lyrics_state.scroll_offset = v;
+                }
+                if let Some(v) = mutations.lyrics_reset_manual_scroll {
+                    state.lyrics_state.is_manual_scroll = v;
+                }
 
+            }   
             // Check for quit
             {
                 let state = self.state.read().await;

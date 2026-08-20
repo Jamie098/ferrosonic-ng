@@ -458,6 +458,93 @@ impl SubsonicClient {
             .append_pair("submission", &submission.to_string());
         self.request_url::<()>(url).await
     }
+
+    pub async fn get_lyrics(
+        &self,
+        artist: &str,
+        title: &str,
+        id: Option<&str>,
+    ) -> Result<Option<String>, SubsonicError> {
+        if id.is_none() && (artist.is_empty() || title.is_empty()) {
+            return Ok(None);
+        }
+        // 1. Try modern OpenSubsonic getLyricsBySongId first if ID is available
+        if let Some(song_id) = id {
+            let endpoint = format!("getLyricsBySongId?id={}", urlencoding::encode(song_id));
+            if let Ok(data) = self.request::<LyricsListData>(&endpoint).await {
+                // Find structured lyrics in either location (OpenSubsonic extension)
+                let structured = data
+                    .structured_lyrics
+                    .as_ref()
+                    .and_then(|v| v.first())
+                    .or_else(|| {
+                        data.lyrics_list
+                            .as_ref()
+                            .and_then(|l| l.structured_lyrics.first())
+                    });
+
+                if let Some(structured) = structured {
+                    let mut content = String::new();
+                    for line in &structured.line {
+                        if let Some(start_ms) = line.start {
+                            // Basic LRC-style formatting if synced
+                            let seconds = (start_ms / 1000) % 60;
+                            let minutes = (start_ms / (1000 * 60)) % 60;
+                            let hundredths = (start_ms / 10) % 100;
+                            content.push_str(&format!(
+                                "[{:02}:{:02}.{:02}] {}\n",
+                                minutes, seconds, hundredths, line.value
+                            ));
+                        } else {
+                            content.push_str(&line.value);
+                            content.push('\n');
+                        }
+                    }
+                    if !content.is_empty() {
+                        return Ok(Some(content));
+                    }
+                }
+
+                // If no structured lyrics, check for plain lyrics inside lyricsList (Navidrome/Feishin fallback)
+                if let Some(plain_lyrics) = data.lyrics_list.as_ref().and_then(|l| l.lyrics.first()) {
+                    if let Some(content) = &plain_lyrics.content {
+                        if !content.is_empty() {
+                            return Ok(Some(content.clone()));
+                        }
+                    }
+                }
+
+                // If the modern endpoint succeeded (status ok) but returned no lyrics, 
+                // do not fall back to the fuzzy legacy endpoint.
+                return Ok(None);
+            }
+        }
+
+        // 2. Fall back to legacy getLyrics
+        // Note: Navidrome also supports 'id' parameter in getLyrics as an extension.
+        // We prioritize ID to avoid fuzzy search issues if possible.
+        let mut endpoint = if let Some(id) = id {
+            format!("getLyrics?id={}", urlencoding::encode(id))
+        } else {
+            format!(
+                "getLyrics?artist={}&title={}",
+                urlencoding::encode(artist),
+                urlencoding::encode(title)
+            )
+        };
+
+        // If we have artist/title but are using ID, we can still include them as fallback or for other servers
+        if id.is_some() {
+            endpoint.push_str(&format!(
+                "&artist={}&title={}",
+                urlencoding::encode(artist),
+                urlencoding::encode(title)
+            ));
+        }
+
+        let data: LyricsData = self.request(&endpoint).await?;
+        Ok(data.lyrics.first().and_then(|l| l.content.clone()))
+    }
 }
 
 #[cfg(test)]

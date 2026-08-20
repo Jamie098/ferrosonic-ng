@@ -103,6 +103,9 @@ pub fn draw(frame: &mut Frame, state: &AppState, mutations: &mut RenderMutations
         Page::Radio => {
             pages::radio::render(frame, content_area, state, mutations);
         }
+        Page::Lyrics => {
+            pages::lyrics::render(frame, content_area, state, mutations);
+        }
         Page::Server => {
             pages::server::render(frame, content_area, state);
         }

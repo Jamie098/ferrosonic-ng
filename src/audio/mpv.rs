@@ -399,6 +399,22 @@ impl MpvController {
         Ok(data.and_then(|v| v.as_bool()).unwrap_or(true))
     }
 
+    pub fn get_metadata_lyrics(&mut self) -> Result<Option<String>, AudioError> {
+        // Try common lyrics tags
+        for tag in &["lyrics", "LYRICS", "unsyncedlyrics", "UNSYNCEDLYRICS", "lyric", "LYRIC"] {
+            let data = self.send_command(vec![
+                json!("get_property"),
+                json!(format!("metadata/by-key/{}", tag)),
+            ])?;
+            if let Some(l) = data.and_then(|v| v.as_str().map(String::from)) {
+                if !l.trim().is_empty() {
+                    return Ok(Some(l));
+                }
+            }
+        }
+        Ok(None)
+    }
+
     /// Quit MPV
     pub fn quit(&mut self) -> Result<(), AudioError> {
         if self.socket.is_some() {

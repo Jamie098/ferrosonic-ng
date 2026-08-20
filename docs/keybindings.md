@@ -19,8 +19,9 @@ Ferrosonic is fully keyboard-driven. Vim-style `j`/`k` navigation is available a
 | `F3` | Queue page |
 | `F4` | Playlists page |
 | `F5` | Radio page |
-| `F6` | Server configuration page |
-| `F7` | Settings page |
+| `F6` | Lyrics page | 
+| `F7` | Server configuration page |
+| `F8` | Settings page |
 
 ## Songs Page (F1)
 
@@ -85,7 +86,25 @@ The Songs page has two modes selectable from the options pane: **Starred** (your
 
 The Radio page lists internet radio stations from servers that support the Subsonic `getInternetRadioStations` endpoint, such as Navidrome.
 
-## Server Page (F6)
+## Lyrics Page (F6)
+
+| Key | Action |
+|---|---|
+| `Up` / `k` | Move lyrics up |
+| `Down` / `j` | Move lyrics down |
+| `Top` / `g` | Move to first line of the lyrics currently loaded |
+| `Increase line spacing` / `]` | Adds spacing equivalent to one line to the lyrics |
+| `Decrease line spacing` / `[` | Removes spacing equivalent to one line to the lyrics | 
+| `Page Up` /`Crtl + b`  | Page up in the lyrics tab | 
+| `Page Down` /`Crtl + f`  | Page down in the lyrics tab | 
+| `Auto-scroll` / `a` | Resume auto-scroll |
+
+The Lyrics page support the following Subsonic endpoints: `getLyricsBySongId` (Preferred, modern), and `getLyrics` (Fallback, legacy version). Both implementations were tested through Navidrome.
+Note that in order to increase the size(lyrics font) the terminal itself needs to be zoomed(Ctrl and +, or Ctrl and mouse wheel up).
+The Auto-scroll command only works when either the scroll options or Page Up/Down have been used previously, then pressing `a` will go back into the portion of the lyrics that is currently highlighted
+Auto-scroll option is default option for .lrc and embedded lyrics, plain text files without a timestamp won't have the highlighted synced line nor the auto-scroll feature working. That's what the current manual scroll keybindings try to solve.
+
+## Server Page (F7)
 
 | Key | Action |
 |---|---|
@@ -93,7 +112,7 @@ The Radio page lists internet radio stations from servers that support the Subso
 | `Enter` | Test connection or Save configuration |
 | `Backspace` | Delete character in text field |
 
-## Settings Page (F7)
+## Settings Page (F8)
 
 | Key | Action |
 |---|---|
@@ -102,3 +121,4 @@ The Radio page lists internet radio stations from servers that support the Subso
 | `Right` / `Enter` | Next option |
 
 Settings include theme selection and cava visualizer toggle. Changes are saved automatically.
+

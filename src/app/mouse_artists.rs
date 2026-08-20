@@ -178,6 +178,13 @@ impl App {
                     state.now_playing.bit_depth = None;
                     state.now_playing.format = None;
                     state.now_playing.channels = None;
+                    state.now_playing.scrobbled = false;
+                    state.now_playing.lyrics = None;
+                    state.now_playing.parsed_lyrics = None;
+                    state.now_playing.lyrics_checked = false;
+                    state.lyrics_state.scroll_offset = 0;
+                    state.lyrics_state.is_manual_scroll = false;
+                    state.lyrics_state.last_scroll_time = None;
                     state.notify(format!("Playing: {}", song.title));
                     drop(state);
                     self.save_queue_sync();
@@ -192,6 +199,9 @@ impl App {
                             }
                         }
                     }
+
+                    self.fetch_lyrics(&song).await;
+
                     self.last_click = Some((x, y, std::time::Instant::now()));
                     return Ok(());
                 }

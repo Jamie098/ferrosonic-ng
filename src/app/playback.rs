@@ -1,5 +1,5 @@
-use crate::app::notifications::TrackInfo;
-use crate::subsonic::models::InternetRadioStation;
+use crate::app::notifications::{self, TrackInfo};
+use crate::subsonic::models::{Child, InternetRadioStation};
 use tracing::{debug, error, info, warn};
 
 use super::*;
@@ -82,7 +82,7 @@ impl App {
                             // for gapless transitions (same album, same format)
                             let mut state = self.state.write().await;
                             state.queue_position = Some(next_pos);
-                            if let Some(song) = state.queue.get(next_pos).cloned() {
+                            let song_to_fetch = if let Some(song) = state.queue.get(next_pos).cloned() {
                                 state.now_playing.song = Some(song.clone());
                                 state.now_playing.radio_station = None;
                                 state.now_playing.radio_title = None;
@@ -90,9 +90,18 @@ impl App {
                                 state.now_playing.position = 0.0;
                                 state.now_playing.duration = song.duration.unwrap_or(0) as f64;
                                 state.now_playing.scrobbled = false;
+                                state.now_playing.lyrics = None;
+                                state.now_playing.parsed_lyrics = None;
+                                state.now_playing.lyrics_checked = false;
+                                state.lyrics_state.scroll_offset = 0;
+                                state.lyrics_state.is_manual_scroll = false;
+                                state.lyrics_state.last_scroll_time = None;
                                 // Don't reset audio properties - let them update naturally
                                 // This avoids triggering PipeWire rate changes unnecessarily
-                            }
+                                Some(song)
+                            } else {
+                                None
+                            };
                             drop(state);
                             self.notify_track_change(next_pos).await;
 
@@ -102,6 +111,10 @@ impl App {
 
                             // Preload the next track for continued gapless playback
                             self.preload_next_track(next_pos).await;
+
+                            if let Some(song) = song_to_fetch {
+                                self.fetch_lyrics(&song).await;
+                            }
                             return;
                         }
                     }
@@ -257,6 +270,31 @@ impl App {
                     state.now_playing.bit_depth = bit_depth;
                     state.now_playing.format = format;
                     state.now_playing.channels = channels;
+                }
+            }
+        }
+
+        // Try to get lyrics from MPV if still missing (might be embedded in the file)
+        {
+            let state = self.state.read().await;
+            let should_check = state.now_playing.lyrics.is_none() 
+                && !state.now_playing.lyrics_checked 
+                && state.now_playing.sample_rate.is_some(); // Audio ready = metadata likely ready
+            drop(state);
+
+            if should_check {
+                if let Ok(Some(lyrics)) = self.mpv.get_metadata_lyrics() {
+                    let mut state = self.state.write().await;
+                    // Check again if still none (avoid race)
+                    if state.now_playing.lyrics.is_none() {
+                        debug!("Found embedded lyrics in MPV metadata");
+                        state.now_playing.lyrics = Some(lyrics.clone());
+                        state.now_playing.parsed_lyrics = Some(crate::app::models::ParsedLyrics::new(&lyrics));
+                    }
+                    state.now_playing.lyrics_checked = true;
+                } else {
+                    let mut state = self.state.write().await;
+                    state.now_playing.lyrics_checked = true;
                 }
             }
         }
@@ -441,6 +479,12 @@ impl App {
             state.now_playing.format = None;
             state.now_playing.channels = None;
             state.now_playing.scrobbled = false;
+            state.now_playing.lyrics = None;
+            state.now_playing.parsed_lyrics = None;
+            state.now_playing.lyrics_checked = false;
+            state.lyrics_state.scroll_offset = 0;
+            state.lyrics_state.is_manual_scroll = false;
+            state.lyrics_state.last_scroll_time = None;
         }
 
         info!("Playing: {} (queue pos {})", song.title, pos);
@@ -453,6 +497,8 @@ impl App {
             state.notify_error(format!("MPV error: {}", e));
             return Ok(());
         }
+
+        self.fetch_lyrics(&song).await;
 
         self.preload_next_track(pos).await;
 
@@ -584,5 +630,55 @@ impl App {
                 album: song.album.unwrap_or_default(),
             });
         }
+    }
+
+    pub(super) async fn fetch_lyrics(&mut self, song: &Child) {
+        let subsonic = self.subsonic.clone();
+        let state = self.state.clone();
+        let artist = song.artist.clone().unwrap_or_default();
+        let title = song.title.clone();
+        let song_id = song.id.clone();
+
+        {
+            let mut state = state.write().await;
+            state.notify(format!("Searching for lyrics..."));
+        }
+
+        tokio::spawn(async move {
+            if let Some(client) = subsonic {
+                match client.get_lyrics(&artist, &title, Some(&song_id)).await {
+                    Ok(Some(lyrics)) => {
+                        let mut state = state.write().await;
+                        // Only update if the song is still the same
+                        if let Some(ref current_song) = state.now_playing.song {
+                            if current_song.id == song_id {
+                                state.now_playing.lyrics = Some(lyrics.clone());
+                                state.now_playing.parsed_lyrics = Some(crate::app::models::ParsedLyrics::new(&lyrics));
+                            }
+                        }
+                    }
+                    Ok(None) => {
+                        let mut state = state.write().await;
+                        if let Some(ref current_song) = state.now_playing.song {
+                            if current_song.id == song_id {
+                                state.now_playing.lyrics = Some("No lyrics found on server.".to_string());
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to fetch lyrics: {}", e);
+                        let mut state = state.write().await;
+                        if let Some(ref current_song) = state.now_playing.song {
+                            if current_song.id == song_id {
+                                state.now_playing.lyrics = Some(format!("Error fetching lyrics: {}", e));
+                            }
+                        }
+                    }
+                }
+            } else {
+                let mut state = state.write().await;
+                state.now_playing.lyrics = Some("Subsonic client not configured.".to_string());
+            }
+        });
     }
 }
