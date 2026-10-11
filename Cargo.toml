@@ -23,7 +23,7 @@ crossterm = "0.28"
 tui-tree-widget = "0.22"
 
 # HTTP client for Subsonic API
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "gzip"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
