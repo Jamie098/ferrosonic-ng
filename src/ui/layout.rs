@@ -9,6 +9,7 @@ use crate::app::state::{AppState, LayoutAreas, Page, RenderMutations};
 
 use super::footer::Footer;
 use super::header::Header;
+use super::library_picker;
 use super::pages;
 use super::widgets::{CavaWidget, NowPlayingWidget};
 
@@ -68,6 +69,7 @@ pub fn draw(frame: &mut Frame, state: &AppState, mutations: &mut RenderMutations
         now_playing: now_playing_area,
         content_left,
         content_right,
+        library_picker: None,
     };
 
     // Render header
@@ -119,6 +121,12 @@ pub fn draw(frame: &mut Frame, state: &AppState, mutations: &mut RenderMutations
     let footer = Footer::new(state.page, colors)
         .sample_rate(state.now_playing.sample_rate)
         .volume(state.volume)
+        .library_switch(state.has_multiple_music_folders())
         .notification(state.notification.as_ref());
     frame.render_widget(footer, footer_area);
+
+    // Render the library picker popup over the page content
+    if let Some(picker) = &state.library_picker {
+        library_picker::render(frame, content_area, state, picker, mutations);
+    }
 }

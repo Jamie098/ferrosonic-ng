@@ -299,6 +299,26 @@ pub struct AlbumListInner {
     pub album: Vec<Album>,
 }
 
+/// getMusicFolders response wrapper
+#[derive(Debug, Deserialize)]
+pub struct MusicFoldersData {
+    #[serde(rename = "musicFolders")]
+    pub music_folders: MusicFoldersInner,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MusicFoldersInner {
+    #[serde(rename = "musicFolder", default)]
+    pub music_folder: Vec<MusicFolder>,
+}
+
+/// Music folder (a server library)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MusicFolder {
+    pub id: i64,
+    pub name: String,
+}
+
 /// Ping response (for testing connection)
 #[derive(Debug, Deserialize)]
 pub struct PingData {}

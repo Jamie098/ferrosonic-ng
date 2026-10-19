@@ -160,10 +160,11 @@ fn render_songs(
         Style::default().fg(colors.border_unfocused)
     };
 
+    let library = state.library_title_suffix();
     let title = if songs.all_songs_loading {
-        " Songs [loading…] ".to_string()
+        format!(" Songs [loading…] {}", library)
     } else {
-        " Songs ".to_string()
+        format!(" Songs {}", library)
     };
 
     let block = Block::default()
@@ -221,10 +222,11 @@ fn render_albums(
         Style::default().fg(colors.border_unfocused)
     };
 
+    let library = state.library_title_suffix();
     let title = if browse_state.albums_loading {
-        " Albums [loading…] ".to_string()
+        format!(" Albums [loading…] {}", library)
     } else {
-        " Albums ".to_string()
+        format!(" Albums {}", library)
     };
 
     let block = Block::default()

@@ -40,6 +40,11 @@ impl App {
             KeyCode::Char('/') => {
                 state.artists.filter_active = true;
             }
+            KeyCode::Char('m') => {
+                if state.has_multiple_music_folders() {
+                    state.open_library_picker();
+                }
+            }
             KeyCode::Esc => {
                 state.artists.filter.clear();
                 state.artists.expanded.clear();

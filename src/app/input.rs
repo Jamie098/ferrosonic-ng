@@ -43,6 +43,12 @@ impl App {
         // Clear notification on any keypress
         state.clear_notification();
 
+        // The library picker popup captures all keys while open
+        if state.library_picker.is_some() {
+            drop(state);
+            return self.handle_library_picker_key(key).await;
+        }
+
         // Bypass global keybindings when typing in server text fields or filtering artists/songs
         let is_server_text_field =
             state.page == Page::Server && state.server_state.selected_field <= 2;

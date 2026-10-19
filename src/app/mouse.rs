@@ -10,6 +10,22 @@ impl App {
         let x = mouse.column;
         let y = mouse.row;
 
+        // The library picker popup captures the mouse while open
+        let mut state = self.state.write().await;
+        if let Some(picker) = state.library_picker.as_mut() {
+            match mouse.kind {
+                MouseEventKind::Down(MouseButton::Left) => {
+                    drop(state);
+                    return self.handle_library_picker_click(x, y).await;
+                }
+                MouseEventKind::ScrollUp => picker.move_up(),
+                MouseEventKind::ScrollDown => picker.move_down(),
+                _ => {}
+            }
+            return Ok(());
+        }
+        drop(state);
+
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => self.handle_mouse_click(x, y).await,
             MouseEventKind::ScrollUp => self.handle_mouse_scroll_up().await,

@@ -17,6 +17,8 @@ pub struct Footer<'a> {
     sample_rate: Option<u32>,
     volume: i32,
     notification: Option<&'a Notification>,
+    /// Whether the server has several libraries to switch between
+    library_switch: bool,
     colors: ThemeColors,
 }
 
@@ -27,8 +29,14 @@ impl<'a> Footer<'a> {
             sample_rate: None,
             volume: 100,
             notification: None,
+            library_switch: false,
             colors,
         }
+    }
+
+    pub fn library_switch(mut self, available: bool) -> Self {
+        self.library_switch = available;
+        self
     }
 
     pub fn sample_rate(mut self, rate: Option<u32>) -> Self {
@@ -67,6 +75,9 @@ impl<'a> Footer<'a> {
                     ("/", "Search"),
                     ("f", "Star/Un-star"),
                 ]);
+                if self.library_switch {
+                    binds.push(("m", "Libraries"));
+                }
             }
             Page::Artists => {
                 binds.extend([
@@ -78,6 +89,9 @@ impl<'a> Footer<'a> {
                     ("s", "Shuffle"),
                     ("f", "Star/Un-star"),
                 ]);
+                if self.library_switch {
+                    binds.push(("m", "Libraries"));
+                }
             }
             Page::Queue => {
                 binds.extend([

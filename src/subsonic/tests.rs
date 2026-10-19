@@ -788,3 +788,155 @@ async fn get_artists_malformed_json_returns_parse_error() {
     let err = make_client(&server).get_artists().await.unwrap_err();
     assert!(matches!(err, SubsonicError::Parse(_)));
 }
+
+// music folders
+#[tokio::test]
+async fn get_music_folders_ok() {
+    let server = MockServer::start_async().await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getMusicFolders");
+            then.status(200).body(
+                r#"{
+                    "subsonic-response": {
+                        "status": "ok",
+                        "version": "1.16.1",
+                        "musicFolders": {
+                            "musicFolder": [
+                                {"id": 1, "name": "Music"},
+                                {"id": 2, "name": "Audiobooks"}
+                            ]
+                        }
+                    }
+                }"#,
+            );
+        })
+        .await;
+
+    let folders = make_client(&server).get_music_folders().await.unwrap();
+    assert_eq!(folders.len(), 2);
+    assert_eq!(folders[0].id, 1);
+    assert_eq!(folders[1].name, "Audiobooks");
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn get_music_folders_empty() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getMusicFolders");
+            then.status(200).body(
+                r#"{"subsonic-response":{"status":"ok","version":"1.16.1","musicFolders":{}}}"#,
+            );
+        })
+        .await;
+
+    let folders = make_client(&server).get_music_folders().await.unwrap();
+    assert!(folders.is_empty());
+}
+
+const EMPTY_ARTISTS: &str =
+    r#"{"subsonic-response":{"status":"ok","version":"1.16.1","artists":{"index":[]}}}"#;
+const EMPTY_ALBUM_LIST: &str =
+    r#"{"subsonic-response":{"status":"ok","version":"1.16.1","albumList2":{"album":[]}}}"#;
+const EMPTY_RANDOM_SONGS: &str =
+    r#"{"subsonic-response":{"status":"ok","version":"1.16.1","randomSongs":{}}}"#;
+const EMPTY_SEARCH: &str =
+    r#"{"subsonic-response":{"status":"ok","version":"1.16.1","searchResult3":{}}}"#;
+const EMPTY_STARRED: &str =
+    r#"{"subsonic-response":{"status":"ok","version":"1.16.1","starred2":{}}}"#;
+
+#[tokio::test]
+async fn selected_music_folders_scope_browse_calls() {
+    let server = MockServer::start_async().await;
+    let mut mocks = Vec::new();
+    for (endpoint, body) in [
+        ("getArtists", EMPTY_ARTISTS),
+        ("getAlbumList2", EMPTY_ALBUM_LIST),
+        ("getRandomSongs", EMPTY_RANDOM_SONGS),
+        ("search3", EMPTY_SEARCH),
+        ("getStarred2", EMPTY_STARRED),
+    ] {
+        mocks.push(
+            server
+                .mock_async(|when, then| {
+                    when.method(GET)
+                        .path(format!("/rest/{endpoint}"))
+                        .query_param("musicFolderId", "7")
+                        .query_param("musicFolderId", "8");
+                    then.status(200).body(body);
+                })
+                .await,
+        );
+    }
+
+    let mut client = make_client(&server);
+    client.set_music_folders(&[7, 8]);
+
+    client.get_artists().await.unwrap();
+    client.get_album_list("newest", 10, 0).await.unwrap();
+    client.get_random_songs(5).await.unwrap();
+    client.search_songs("", 0, 10).await.unwrap();
+    client.get_starred_songs().await.unwrap();
+    client.get_starred_albums().await.unwrap();
+
+    for (mock, hits) in mocks.iter().zip([1, 1, 1, 1, 2]) {
+        mock.assert_hits_async(hits).await;
+    }
+}
+
+#[tokio::test]
+async fn no_music_folder_leaves_browse_calls_unscoped() {
+    let server = MockServer::start_async().await;
+    let scoped = server
+        .mock_async(|when, then| {
+            when.method(GET).query_param_exists("musicFolderId");
+            then.status(500);
+        })
+        .await;
+    for (endpoint, body) in [
+        ("getArtists", EMPTY_ARTISTS),
+        ("getAlbumList2", EMPTY_ALBUM_LIST),
+        ("getRandomSongs", EMPTY_RANDOM_SONGS),
+        ("search3", EMPTY_SEARCH),
+        ("getStarred2", EMPTY_STARRED),
+    ] {
+        server
+            .mock_async(|when, then| {
+                when.method(GET).path(format!("/rest/{endpoint}"));
+                then.status(200).body(body);
+            })
+            .await;
+    }
+
+    let mut client = make_client(&server);
+    // Selecting a folder and going back to "All" must drop the parameter again.
+    client.set_music_folders(&[7]);
+    client.set_music_folders(&[]);
+
+    client.get_artists().await.unwrap();
+    client.get_album_list("newest", 10, 0).await.unwrap();
+    client.get_random_songs(5).await.unwrap();
+    client.search_songs("", 0, 10).await.unwrap();
+    client.get_starred_songs().await.unwrap();
+
+    scoped.assert_hits_async(0).await;
+}
+
+#[tokio::test]
+async fn get_artists_treats_data_not_found_as_empty() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method(GET).path("/rest/getArtists");
+            then.status(200).body(
+                r#"{"subsonic-response":{"status":"failed","version":"1.16.1","error":{"code":70,"message":"Library not found or empty"}}}"#,
+            );
+        })
+        .await;
+
+    let mut client = make_client(&server);
+    client.set_music_folders(&[2]);
+    assert!(client.get_artists().await.unwrap().is_empty());
+}

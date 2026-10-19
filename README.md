@@ -15,6 +15,7 @@ Ferrosonic-ng is a community-driven fork of [ferrosonic](https://github.com/jaid
 - **MPRIS2 integration** — Full desktop media controls (play, pause, stop, next, previous, seek)
 - **Artist/album browser** — Tree-based navigation with expandable artists, album listings, and artist filtering
 - **Browse page** — Browse and search all, starred and random songs/albums from your server
+- **Multi-library** — On servers with several music folders, `m` opens a picker to browse any combination of libraries (or exclude just one); scopes artists, albums, songs and search, remembered across restarts
 - **Playlists & queue management** — Browse server playlists, add/remove/reorder/shuffle queue, clear history
 - **Queue persistence** — Automatically save and restore your play queue and current position on launch
 - **Internet radio** — Browse and play Navidrome/Subsonic radio stations with live stream metadata when available
@@ -100,6 +101,8 @@ Notifications = true
 RandomSongsCount = 100
 Scrobble = true
 SaveQueue = true
+# Libraries (music folders) to browse; leave unset for all libraries
+# MusicFolderIds = [1, 3]
 # Valid tabs: Browse, Artists, Queue, Playlists, Radio, Server, Settings
 VisibleTabs = ["Browse", "Artists", "Queue", "Playlists", "Radio", "Server", "Settings"]
 ```
@@ -116,6 +119,7 @@ VisibleTabs = ["Browse", "Artists", "Queue", "Playlists", "Radio", "Server", "Se
 | `RandomSongsCount` | `usize` | `250` | Number of random songs to fetch |
 | `Scrobble` | `bool` | `true` | Enable scrobbling (reporting played tracks to the server) |
 | `SaveQueue` | `bool` | `true` | Save and restore the play queue and current position on launch |
+| `MusicFolderIds` | `integer[]` | unset | Libraries (music folders) to browse on multi-library servers; unset means all. Set by pressing `m` on the Browse or Artists page |
 | `VisibleTabs` | `string[]` | all tabs | Header tabs to show, in order. Valid values: `Browse`, `Artists`, `Queue`, `Playlists`, `Radio`, `Server`, `Settings` |
 
 Logs are written to `~/.config/ferrosonic/ferrosonic.log`.

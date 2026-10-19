@@ -8,7 +8,7 @@ use ratatui::layout::Rect;
 
 use crate::app::models::{BrowseTab, SongOption};
 use crate::config::Config;
-use crate::subsonic::models::{Album, Artist, Child, InternetRadioStation, Playlist};
+use crate::subsonic::models::{Album, Artist, Child, InternetRadioStation, MusicFolder, Playlist};
 use crate::ui::theme::{ThemeColors, ThemeData};
 
 /// Current page in the application
@@ -445,6 +445,8 @@ pub struct LayoutAreas {
     pub content_left: Option<Rect>,
     /// Right pane for dual-pane pages (Songs list)
     pub content_right: Option<Rect>,
+    /// Library picker popup, when open
+    pub library_picker: Option<Rect>,
 }
 
 /// Mutable values produced during a render pass so drawing can run under a read lock.
@@ -462,6 +464,7 @@ pub struct RenderMutations {
     pub playlists_song_scroll_offset: Option<usize>,
     pub artists_tree_scroll_offset: Option<usize>,
     pub artists_song_scroll_offset: Option<usize>,
+    pub library_picker_scroll_offset: Option<usize>,
 }
 
 /// Complete application state
@@ -503,6 +506,46 @@ pub struct AppState {
     pub cava_available: bool,
     /// Cached layout areas from last render (for mouse hit-testing)
     pub layout: LayoutAreas,
+    /// Music folders (libraries) available on the server
+    pub music_folders: Vec<MusicFolder>,
+    /// Library picker popup, when open
+    pub library_picker: Option<LibraryPicker>,
+}
+
+/// Popup for choosing which libraries (music folders) to browse
+#[derive(Debug, Clone, Default)]
+pub struct LibraryPicker {
+    /// Highlighted row
+    pub cursor: usize,
+    /// Checked state for each entry of `AppState::music_folders`
+    pub checked: Vec<bool>,
+    /// Scroll offset (persisted across renders)
+    pub scroll_offset: usize,
+}
+
+impl LibraryPicker {
+    pub fn move_up(&mut self) {
+        self.cursor = self.cursor.saturating_sub(1);
+    }
+
+    pub fn move_down(&mut self) {
+        if self.cursor + 1 < self.checked.len() {
+            self.cursor += 1;
+        }
+    }
+
+    /// Toggle the highlighted library
+    pub fn toggle(&mut self) {
+        if let Some(c) = self.checked.get_mut(self.cursor) {
+            *c = !*c;
+        }
+    }
+
+    /// Check every library, or uncheck them all if they already are
+    pub fn toggle_all(&mut self) {
+        let all = self.checked.iter().all(|&c| c);
+        self.checked.iter_mut().for_each(|c| *c = !all);
+    }
 }
 
 /// A row of styled segments from cava's terminal output
@@ -607,13 +650,220 @@ impl AppState {
     pub fn visible_pages(&self) -> Vec<Page> {
         Page::visible_from_config(&self.config.visible_tabs)
     }
+
+    /// Whether the server offers more than one library to switch between
+    pub fn has_multiple_music_folders(&self) -> bool {
+        self.music_folders.len() > 1
+    }
+
+    /// Store the server's music folders, dropping configured libraries the
+    /// server no longer has (e.g. after switching servers); if none remain,
+    /// all libraries are browsed. Returns `true` if the configuration changed.
+    pub fn set_music_folders(&mut self, folders: Vec<MusicFolder>) -> bool {
+        self.music_folders = folders;
+        let before = self.config.music_folder_ids.len();
+        let known = &self.music_folders;
+        self.config
+            .music_folder_ids
+            .retain(|id| known.iter().any(|f| f.id == *id));
+        self.config.music_folder_ids.len() != before
+    }
+
+    /// Open the library picker with the active selection checked
+    pub fn open_library_picker(&mut self) {
+        let ids = &self.config.music_folder_ids;
+        self.library_picker = Some(LibraryPicker {
+            checked: self
+                .music_folders
+                .iter()
+                .map(|f| ids.is_empty() || ids.contains(&f.id))
+                .collect(),
+            ..Default::default()
+        });
+    }
+
+    /// Library ids checked in `picker`, in server order. Checking every
+    /// library yields an empty list (all libraries); checking none yields `None`.
+    pub fn picker_selection(&self, picker: &LibraryPicker) -> Option<Vec<i64>> {
+        if !picker.checked.iter().any(|&c| c) {
+            return None;
+        }
+        if picker.checked.iter().all(|&c| c) {
+            return Some(Vec::new());
+        }
+        Some(
+            self.music_folders
+                .iter()
+                .zip(&picker.checked)
+                .filter(|(_, &c)| c)
+                .map(|(f, _)| f.id)
+                .collect(),
+        )
+    }
+
+    /// Display name of the active libraries
+    pub fn music_folder_name(&self) -> String {
+        let ids = &self.config.music_folder_ids;
+        if ids.is_empty() {
+            return "All".to_string();
+        }
+        ids.iter()
+            .map(|id| {
+                self.music_folders
+                    .iter()
+                    .find(|f| f.id == *id)
+                    .map_or_else(|| format!("#{}", id), |f| f.name.clone())
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    /// Pane title suffix naming the active libraries; empty unless the server
+    /// has more than one library to choose from.
+    pub fn library_title_suffix(&self) -> String {
+        if !self.has_multiple_music_folders() {
+            String::new()
+        } else if self.config.music_folder_ids.len() == 1 {
+            format!("· Library: {} ", self.music_folder_name())
+        } else {
+            format!("· Libraries: {} ", self.music_folder_name())
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::config::Config;
+    use crate::subsonic::models::MusicFolder;
 
     use super::{AppState, Page};
+
+    fn folders() -> Vec<MusicFolder> {
+        vec![
+            MusicFolder {
+                id: 4,
+                name: "Music".to_string(),
+            },
+            MusicFolder {
+                id: 9,
+                name: "Audiobooks".to_string(),
+            },
+            MusicFolder {
+                id: 12,
+                name: "Podcasts".to_string(),
+            },
+        ]
+    }
+
+    #[test]
+    fn picker_opens_with_all_checked_when_browsing_everything() {
+        let mut state = AppState::new(Config::default());
+        state.set_music_folders(folders());
+        state.open_library_picker();
+
+        let picker = state.library_picker.clone().unwrap();
+        assert_eq!(picker.checked, [true, true, true]);
+        assert_eq!(state.picker_selection(&picker), Some(vec![]));
+    }
+
+    #[test]
+    fn picker_excludes_a_single_library() {
+        let mut state = AppState::new(Config::default());
+        state.set_music_folders(folders());
+        state.open_library_picker();
+
+        let mut picker = state.library_picker.clone().unwrap();
+        picker.move_down();
+        picker.toggle();
+        assert_eq!(state.picker_selection(&picker), Some(vec![4, 12]));
+
+        state.config.music_folder_ids = vec![4, 12];
+        assert_eq!(
+            state.library_title_suffix(),
+            "· Libraries: Music, Podcasts "
+        );
+    }
+
+    #[test]
+    fn picker_rejects_empty_selection() {
+        let mut state = AppState::new(Config::default());
+        state.set_music_folders(folders());
+        state.open_library_picker();
+
+        let mut picker = state.library_picker.clone().unwrap();
+        picker.toggle_all();
+        assert_eq!(picker.checked, [false, false, false]);
+        assert_eq!(state.picker_selection(&picker), None);
+
+        picker.toggle_all();
+        assert_eq!(state.picker_selection(&picker), Some(vec![]));
+    }
+
+    #[test]
+    fn picker_opens_with_configured_libraries_checked() {
+        let mut state = AppState::new(Config {
+            music_folder_ids: vec![9],
+            ..Default::default()
+        });
+        state.set_music_folders(folders());
+        state.open_library_picker();
+
+        let picker = state.library_picker.clone().unwrap();
+        assert_eq!(picker.checked, [false, true, false]);
+        assert_eq!(state.library_title_suffix(), "· Library: Audiobooks ");
+    }
+
+    #[test]
+    fn picker_cursor_stays_in_bounds() {
+        let mut state = AppState::new(Config::default());
+        state.set_music_folders(folders());
+        state.open_library_picker();
+
+        let mut picker = state.library_picker.clone().unwrap();
+        picker.move_up();
+        assert_eq!(picker.cursor, 0);
+        for _ in 0..5 {
+            picker.move_down();
+        }
+        assert_eq!(picker.cursor, 2);
+    }
+
+    #[test]
+    fn stale_music_folders_are_dropped() {
+        let mut state = AppState::new(Config {
+            music_folder_ids: vec![9, 42],
+            ..Default::default()
+        });
+
+        assert!(state.set_music_folders(folders()));
+        assert_eq!(state.config.music_folder_ids, [9]);
+
+        state.config.music_folder_ids = vec![42];
+        assert!(state.set_music_folders(folders()));
+        assert!(state.config.music_folder_ids.is_empty());
+        assert_eq!(state.music_folder_name(), "All");
+    }
+
+    #[test]
+    fn known_music_folders_are_kept() {
+        let mut state = AppState::new(Config {
+            music_folder_ids: vec![4, 9],
+            ..Default::default()
+        });
+
+        assert!(!state.set_music_folders(folders()));
+        assert_eq!(state.config.music_folder_ids, [4, 9]);
+    }
+
+    #[test]
+    fn library_title_is_hidden_without_a_choice() {
+        let mut state = AppState::new(Config::default());
+        assert_eq!(state.library_title_suffix(), "");
+
+        state.set_music_folders(folders()[..1].to_vec());
+        assert!(!state.has_multiple_music_folders());
+        assert_eq!(state.library_title_suffix(), "");
+    }
 
     #[test]
     fn visible_pages_use_default_when_not_configured() {

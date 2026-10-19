@@ -30,6 +30,7 @@ Ferrosonic is fully keyboard-driven. Vim-style `j`/`k` navigation is available a
 | `Up` / `k` | Move selection up |
 | `Down` / `j` | Move selection down |
 | `Enter` | Play selected song (queues all visible songs and starts from selection) |
+| `m` | Choose which libraries / music folders to browse (one or more); shown in the pane title |
 
 The Songs page has two modes selectable from the options pane: **Starred** (your favourited songs) and **Random** (a random selection from the server).
 
@@ -47,6 +48,7 @@ The Songs page has two modes selectable from the options pane: **Starred** (your
 | `e` | Add selected item to end of queue |
 | `n` | Add selected item as next in queue |
 | `s` | Shuffle play all songs by the selected artist or album |
+| `m` | Choose which libraries / music folders to browse (one or more); shown in the pane title |
 
 ## Queue Page (F3)
 
@@ -102,3 +104,18 @@ The Radio page lists internet radio stations from servers that support the Subso
 | `Right` / `Enter` | Next option |
 
 Settings include theme selection and cava visualizer toggle. Changes are saved automatically.
+
+## Library Picker
+
+Opened with `m` on the Browse or Artists page when the server has more than one library.
+
+| Key | Action |
+|---|---|
+| `Up` / `k` | Move up |
+| `Down` / `j` | Move down |
+| `Space` / `x` | Check / uncheck the highlighted library |
+| `a` | Check all libraries, or uncheck all if every one is checked |
+| `Enter` | Apply the selection (at least one library must be checked) |
+| `Esc` / `m` / `q` | Close without changing anything |
+
+Clicking a library toggles it; clicking outside the picker closes it.

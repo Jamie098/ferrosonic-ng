@@ -24,6 +24,8 @@ pub struct SubsonicClient {
     password: String,
     /// HTTP client
     http: Client,
+    /// Libraries to scope browse calls to; empty means all libraries
+    music_folder_ids: Vec<i64>,
 }
 
 impl SubsonicClient {
@@ -41,7 +43,25 @@ impl SubsonicClient {
             username: username.to_string(),
             password: password.to_string(),
             http,
+            music_folder_ids: Vec::new(),
         })
+    }
+
+    /// Scope subsequent browse calls to the given libraries (music folders), or all when empty
+    pub fn set_music_folders(&mut self, ids: &[i64]) {
+        self.music_folder_ids = ids.to_vec();
+    }
+
+    /// Build URL for a browse endpoint, adding one `musicFolderId` per selected library
+    fn build_scoped_url(&self, endpoint: &str) -> Result<Url, SubsonicError> {
+        let mut url = self.build_url(endpoint)?;
+        {
+            let mut query = url.query_pairs_mut();
+            for id in &self.music_folder_ids {
+                query.append_pair("musicFolderId", &id.to_string());
+            }
+        }
+        Ok(url)
     }
 
     /// Build URL with authentication parameters
@@ -131,14 +151,16 @@ impl SubsonicClient {
     }
 
     pub async fn get_starred_songs(&self) -> Result<Vec<Child>, SubsonicError> {
-        let data: StarredSongsData = self.request("getStarred2").await?;
+        let url = self.build_scoped_url("getStarred2")?;
+        let data: StarredSongsData = self.request_url(url).await?;
         let songs = data.starred_songs.song;
         debug!("Fetched {} starred songs", songs.len());
         Ok(songs)
     }
 
     pub async fn get_starred_albums(&self) -> Result<Vec<Album>, SubsonicError> {
-        let data: StarredSongsData = self.request("getStarred2").await?;
+        let url = self.build_scoped_url("getStarred2")?;
+        let data: StarredSongsData = self.request_url(url).await?;
         let albums = data.starred_songs.album;
         debug!("Fetched {} starred albums", albums.len());
         Ok(albums)
@@ -158,7 +180,7 @@ impl SubsonicClient {
         offset: usize,
         count: usize,
     ) -> Result<Vec<Child>, SubsonicError> {
-        let mut url = self.build_url("search3")?;
+        let mut url = self.build_scoped_url("search3")?;
         url.query_pairs_mut()
             .append_pair("query", query)
             .append_pair("songCount", &count.to_string())
@@ -182,8 +204,9 @@ impl SubsonicClient {
         &self,
         random_songs_count: usize,
     ) -> Result<Vec<Child>, SubsonicError> {
-        let mut url = self.build_url("getRandomSongs")?;
-        url.query_pairs_mut().append_pair("size", &random_songs_count.to_string());
+        let mut url = self.build_scoped_url("getRandomSongs")?;
+        url.query_pairs_mut()
+            .append_pair("size", &random_songs_count.to_string());
         let data: RandomSongsData = self.request_url(url).await?;
 
         let songs = data.random_songs.song;
@@ -194,7 +217,14 @@ impl SubsonicClient {
 
     /// Get all artists
     pub async fn get_artists(&self) -> Result<Vec<Artist>, SubsonicError> {
-        let data: ArtistsData = self.request("getArtists").await?;
+        let url = self.build_scoped_url("getArtists")?;
+        let data: ArtistsData = match self.request_url(url).await {
+            Ok(data) => data,
+            // Navidrome answers an empty (or scoped-empty) library with error 70
+            // instead of an empty index; treat it as no artists, not a failure.
+            Err(SubsonicError::Api { code: 70, .. }) => return Ok(Vec::new()),
+            Err(e) => return Err(e),
+        };
 
         let artists: Vec<Artist> = data
             .artists
@@ -308,7 +338,7 @@ impl SubsonicClient {
         size: usize,
         offset: usize,
     ) -> Result<Vec<Album>, SubsonicError> {
-        let mut url = self.build_url("getAlbumList2")?;
+        let mut url = self.build_scoped_url("getAlbumList2")?;
         url.query_pairs_mut()
             .append_pair("type", list_type)
             .append_pair("size", &size.to_string())
@@ -324,6 +354,14 @@ impl SubsonicClient {
             offset
         );
         Ok(data.album_list.album)
+    }
+
+    /// Get the server's music folders (libraries)
+    pub async fn get_music_folders(&self) -> Result<Vec<MusicFolder>, SubsonicError> {
+        let data: MusicFoldersData = self.request("getMusicFolders").await?;
+        let folders = data.music_folders.music_folder;
+        debug!("Fetched {} music folders", folders.len());
+        Ok(folders)
     }
 
     /// Get all playlists

@@ -5,6 +5,7 @@ mod cava;
 mod input;
 mod input_artists;
 mod input_browse;
+mod input_library;
 mod input_playlists;
 mod input_queue;
 mod input_radio;
@@ -93,7 +94,10 @@ impl App {
 
         let subsonic = if config.is_configured() {
             match SubsonicClient::new(&config.base_url, &config.username, &config.password) {
-                Ok(client) => Some(client),
+                Ok(mut client) => {
+                    client.set_music_folders(&config.music_folder_ids);
+                    Some(client)
+                }
                 Err(e) => {
                     warn!("Failed to create Subsonic client: {}", e);
                     None
@@ -242,6 +246,8 @@ impl App {
             state.browse.all_songs_has_more = true;
         }
 
+        // Folders first: they decide which library the calls below are scoped to
+        self.get_music_folders().await;
         self.get_all_songs(false).await;
         self.get_artists().await;
         self.get_playlists().await;
@@ -391,6 +397,12 @@ impl App {
                 }
                 if let Some(v) = mutations.artists_song_scroll_offset {
                     state.artists.song_scroll_offset = v;
+                }
+                if let (Some(v), Some(picker)) = (
+                    mutations.library_picker_scroll_offset,
+                    state.library_picker.as_mut(),
+                ) {
+                    picker.scroll_offset = v;
                 }
             }
 

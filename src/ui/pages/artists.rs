@@ -98,12 +98,13 @@ fn render_tree(
         Style::default().fg(colors.border_unfocused)
     };
 
+    let library = state.library_title_suffix();
     let title = if artists.filter_active {
-        format!(" Artists (/{}) ", artists.filter)
+        format!(" Artists (/{}) {}", artists.filter, library)
     } else if !artists.filter.is_empty() {
-        format!(" Artists [{}] ", artists.filter)
+        format!(" Artists [{}] {}", artists.filter, library)
     } else {
-        " Artists ".to_string()
+        format!(" Artists {}", library)
     };
 
     let block = Block::default()
